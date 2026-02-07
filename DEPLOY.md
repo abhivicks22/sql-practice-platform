@@ -43,4 +43,21 @@ Open that link in any browser to use your SQL practice platform. You can share i
 
 ---
 
+---
+
+## Optional: Gemini “brain” layer (Business + Edge Cases)
+
+The app can generate **Business Impact** and **Edge Cases** with Gemini. The API key is used **only on the server** (never sent to the browser).
+
+1. Get an API key: https://aistudio.google.com/apikey
+2. **Locally:** Create `.env.local` in the project root and add:
+   ```bash
+   GEMINI_API_KEY=your_key_here
+   ```
+3. **On Vercel:** Project → Settings → Environment Variables → add `GEMINI_API_KEY` with your key.
+
+If `GEMINI_API_KEY` is not set, the “Generate with Gemini” button will show an error; the rest of the app works without it.
+
+---
+
 **Updates:** Push to `main` on GitHub and Vercel will automatically redeploy.

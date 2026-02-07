@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import {
   ChevronLeft,
   ChevronRight,
@@ -15,8 +15,10 @@ import {
   ChevronUp,
   TrendingUp,
   Sparkles,
+  Loader2,
 } from "lucide-react"
 import type { Question, Difficulty } from "@/lib/sql-data"
+import type { EdgeCase } from "@/lib/sql-data"
 
 interface LeftPanelProps {
   question: Question
@@ -57,13 +59,58 @@ export function LeftPanel({
   const [edgeCaseChecks, setEdgeCaseChecks] = useState<boolean[]>(
     question.edgeCases.map((ec) => ec.checked)
   )
+  const [geminiLoading, setGeminiLoading] = useState(false)
+  const [geminiError, setGeminiError] = useState<string | null>(null)
+  const [geminiResult, setGeminiResult] = useState<{
+    businessImpact: string
+    optimizationTips: string[]
+    edgeCases: EdgeCase[]
+  } | null>(null)
 
   // Reset state when question changes
   useEffect(() => {
     setActiveTab("problem")
     setOpenSolution(0)
     setEdgeCaseChecks(question.edgeCases.map((ec) => ec.checked))
+    setGeminiResult(null)
+    setGeminiError(null)
   }, [question])
+
+  const generateWithGemini = useCallback(async () => {
+    setGeminiLoading(true)
+    setGeminiError(null)
+    try {
+      const res = await fetch("/api/gemini", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: question.title,
+          problem: question.problem,
+          category: question.category,
+          schema: question.schema,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setGeminiError(data.error || "Request failed")
+        return
+      }
+      setGeminiResult({
+        businessImpact: data.businessImpact ?? "",
+        optimizationTips: data.optimizationTips ?? [],
+        edgeCases: data.edgeCases ?? [],
+      })
+      setEdgeCaseChecks((data.edgeCases ?? []).map(() => false))
+    } catch {
+      setGeminiError("Network error")
+    } finally {
+      setGeminiLoading(false)
+    }
+  }, [question.title, question.problem, question.category, question.schema])
+
+  const displayedBusinessImpact = geminiResult?.businessImpact ?? question.businessImpact
+  const displayedOptimizationTips = geminiResult?.optimizationTips ?? question.optimizationTips
+  const displayedEdgeCases = geminiResult?.edgeCases ?? question.edgeCases
 
   const toggleEdgeCase = (index: number) => {
     setEdgeCaseChecks((prev) => {
@@ -215,13 +262,28 @@ export function LeftPanel({
 
         {activeTab === "intelligence" && (
           <div className="space-y-5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-muted-foreground">AI-generated business context</span>
+              <button
+                type="button"
+                onClick={generateWithGemini}
+                disabled={geminiLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-cyan/15 text-cyan border border-cyan/30 hover:bg-cyan/25 disabled:opacity-50"
+              >
+                {geminiLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />}
+                {geminiLoading ? "Generating…" : "Generate with Gemini"}
+              </button>
+            </div>
+            {geminiError && (
+              <p className="text-xs text-red-400">{geminiError}</p>
+            )}
             <div className="glass-panel p-4 space-y-2">
               <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-cyan">
                 <TrendingUp className="h-3.5 w-3.5" />
                 Business Impact
               </h3>
               <p className="text-sm leading-relaxed text-foreground/80">
-                {question.businessImpact}
+                {displayedBusinessImpact}
               </p>
             </div>
             <div className="glass-panel p-4 space-y-3">
@@ -230,7 +292,7 @@ export function LeftPanel({
                 Optimization Tips
               </h3>
               <ul className="space-y-2">
-                {question.optimizationTips.map((tip, i) => (
+                {displayedOptimizationTips.map((tip, i) => (
                   <li key={i} className="flex items-start gap-2">
                     <span className="mt-1 h-1.5 w-1.5 rounded-full bg-cyan shrink-0" />
                     <span className="text-sm leading-relaxed text-foreground/80">
@@ -245,7 +307,22 @@ export function LeftPanel({
 
         {activeTab === "edge-cases" && (
           <div className="space-y-2">
-            {question.edgeCases.map((ec, i) => (
+            <div className="flex items-center justify-between gap-2 pb-1">
+              <span className="text-xs text-muted-foreground">Consider these edge cases</span>
+              <button
+                type="button"
+                onClick={generateWithGemini}
+                disabled={geminiLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-cyan/15 text-cyan border border-cyan/30 hover:bg-cyan/25 disabled:opacity-50"
+              >
+                {geminiLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />}
+                {geminiLoading ? "Generating…" : "Generate with Gemini"}
+              </button>
+            </div>
+            {geminiError && (
+              <p className="text-xs text-red-400">{geminiError}</p>
+            )}
+            {displayedEdgeCases.map((ec, i) => (
               <button
                 key={i}
                 onClick={() => toggleEdgeCase(i)}
@@ -263,7 +340,7 @@ export function LeftPanel({
                       : "text-foreground/90"
                   }`}
                 >
-                  {ec.text}
+                  {typeof ec === "object" && ec !== null && "text" in ec ? ec.text : String(ec)}
                 </span>
               </button>
             ))}
