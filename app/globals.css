@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222 84% 5%;
+    --foreground: 210 40% 92%;
+    --card: 222 60% 8%;
+    --card-foreground: 210 40% 92%;
+    --popover: 222 60% 8%;
+    --popover-foreground: 210 40% 92%;
+    --primary: 188 95% 43%;
+    --primary-foreground: 222 84% 5%;
+    --secondary: 222 40% 14%;
+    --secondary-foreground: 210 40% 92%;
+    --muted: 222 40% 12%;
+    --muted-foreground: 215 20% 55%;
+    --accent: 222 40% 14%;
+    --accent-foreground: 210 40% 92%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 215 30% 16%;
+    --input: 215 30% 16%;
+    --ring: 188 95% 43%;
+    --chart-1: 188 95% 43%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --radius: 0.75rem;
+    --sidebar-background: 222 60% 8%;
+    --sidebar-foreground: 210 40% 92%;
+    --sidebar-primary: 188 95% 43%;
+    --sidebar-primary-foreground: 222 84% 5%;
+    --sidebar-accent: 222 40% 14%;
+    --sidebar-accent-foreground: 210 40% 92%;
+    --sidebar-border: 215 30% 16%;
+    --sidebar-ring: 188 95% 43%;
+    --cyan: 188 95% 43%;
+    --cyan-glow: 188 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .glass-panel {
+    @apply bg-card/60 backdrop-blur-md border border-white/[0.06] rounded-lg;
+  }
+
+  .glass-panel-strong {
+    @apply bg-card/80 backdrop-blur-xl border border-white/[0.08] rounded-lg;
+  }
+
+  .glow-text {
+    text-shadow: 0 0 20px hsl(188 95% 43% / 0.6), 0 0 40px hsl(188 95% 43% / 0.3);
+  }
+
+  .glow-border {
+    box-shadow: 0 0 15px hsl(188 95% 43% / 0.15), inset 0 0 15px hsl(188 95% 43% / 0.05);
+  }
+
+  .glow-button {
+    box-shadow: 0 0 20px hsl(188 95% 43% / 0.4), 0 0 40px hsl(188 95% 43% / 0.2);
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(215 30% 20%);
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: hsl(215 30% 28%);
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
