@@ -29,6 +29,10 @@ const difficultyColors: Record<string, { active: string; inactive: string }> = {
     active: "bg-red-500/15 text-red-400 border-red-400/30",
     inactive: "text-muted-foreground hover:text-red-400 hover:bg-red-500/10 border-transparent",
   },
+  "Extreme Hard": {
+    active: "bg-purple-500/15 text-purple-400 border-purple-400/30",
+    inactive: "text-muted-foreground hover:text-purple-400 hover:bg-purple-500/10 border-transparent",
+  },
 }
 
 export function Header({
