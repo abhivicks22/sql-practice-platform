@@ -80,7 +80,7 @@ export function Header({
           <button
             type="button"
             onClick={() => setThemeOpen((o) => !o)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border/50 bg-card/80 text-foreground hover:bg-secondary/60 hover:border-cyan/30 transition-all"
+            className="btn-space flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all"
           >
             <Palette className="h-3.5 w-3.5 text-cyan" />
             Theme
@@ -117,7 +117,7 @@ export function Header({
           <button
             type="button"
             onClick={() => setPatternOpen((o) => !o)}
-            className="flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all border rounded-md bg-cyan/15 text-cyan border-cyan/30"
+            className="btn-space flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all rounded-md bg-cyan/15 text-cyan border-cyan/30"
           >
             {selectedCategory}
             <ChevronDown className={`h-3.5 w-3.5 transition-transform ${patternOpen ? "rotate-180" : ""}`} />
@@ -150,7 +150,7 @@ export function Header({
           <button
             type="button"
             onClick={() => setDiffOpen((o) => !o)}
-            className={`flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all border rounded-md ${
+            className={`btn-space flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all rounded-md ${
               difficultyColors[selectedDifficulty]?.active ?? "bg-cyan/15 text-cyan border-cyan/30"
             }`}
           >

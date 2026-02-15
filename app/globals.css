@@ -132,6 +132,24 @@
     box-shadow: 0 0 0 1px hsl(var(--cyan) / 0.3);
   }
 
+  /* Darker, space-like buttons (main app only) */
+  .sql-app .btn-space {
+    @apply bg-black/40 border border-cyan/20 text-foreground;
+    box-shadow: 0 0 0 1px hsl(var(--cyan) / 0.15), inset 0 1px 0 0 hsl(var(--cyan) / 0.05);
+  }
+  .sql-app .btn-space:hover:not(:disabled) {
+    border-color: hsl(var(--cyan) / 0.4);
+    box-shadow: 0 0 12px hsl(var(--cyan) / 0.15), 0 0 0 1px hsl(var(--cyan) / 0.25);
+  }
+  .sql-app .btn-space-primary {
+    @apply bg-cyan/90 text-primary-foreground border border-cyan/50;
+    box-shadow: 0 0 0 1px hsl(var(--cyan) / 0.3), inset 0 1px 0 0 hsl(var(--cyan) / 0.2);
+  }
+  .sql-app .btn-space-primary:hover:not(:disabled) {
+    @apply bg-cyan;
+    box-shadow: 0 0 16px hsl(var(--cyan) / 0.35), 0 0 0 1px hsl(var(--cyan) / 0.4);
+  }
+
   .scrollbar-thin::-webkit-scrollbar {
     width: 6px;
     height: 6px;

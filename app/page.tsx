@@ -4,14 +4,19 @@ import { useState, useMemo, useEffect, useRef } from "react"
 import { Header } from "@/components/sql-navigator/header"
 import { LeftPanel } from "@/components/sql-navigator/left-panel"
 import { RightPanel } from "@/components/sql-navigator/right-panel"
+import { WelcomeView } from "@/components/sql-navigator/welcome-view"
+import { ThemeSelectionView } from "@/components/sql-navigator/theme-selection-view"
 import {
   ResizablePanelGroup,
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable"
-import { questions, categories } from "@/lib/sql-data"
+import { questions } from "@/lib/sql-data"
 import { useTheme } from "@/contexts/theme-context"
 import type { ThemeId } from "@/contexts/theme-context"
+
+const ONBOARDED_KEY = "sql-navigator-onboarded"
+type FlowStep = "welcome" | "theme" | "app"
 
 function AmbientBackground() {
   const { theme } = useTheme()
@@ -204,9 +209,29 @@ function FloatingParticles() {
 }
 
 export default function SQLNavigatorPage() {
+  const [flowStep, setFlowStep] = useState<FlowStep>("welcome")
   const [selectedCategory, setSelectedCategory] = useState("All Patterns")
   const [selectedDifficulty, setSelectedDifficulty] = useState("All")
   const [currentIndex, setCurrentIndex] = useState(0)
+
+  useEffect(() => {
+    try {
+      if (typeof window === "undefined") return
+      const onboarded = localStorage.getItem(ONBOARDED_KEY)
+      if (onboarded === "true") setFlowStep("app")
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  const handleOnboarded = () => {
+    try {
+      localStorage.setItem(ONBOARDED_KEY, "true")
+    } catch {
+      // ignore
+    }
+    setFlowStep("app")
+  }
 
   const filteredQuestions = useMemo(() => {
     return questions.filter((q) => {
@@ -240,9 +265,32 @@ export default function SQLNavigatorPage() {
     )
   }
 
-  if (!currentQuestion) {
+  if (flowStep === "welcome") {
     return (
       <div className="h-screen flex flex-col">
+        <AmbientBackground />
+        <FloatingParticles />
+        <WelcomeView onGetStarted={() => setFlowStep("theme")} />
+      </div>
+    )
+  }
+
+  if (flowStep === "theme") {
+    return (
+      <div className="h-screen flex flex-col">
+        <AmbientBackground />
+        <FloatingParticles />
+        <ThemeSelectionView
+          onBack={() => setFlowStep("welcome")}
+          onContinue={handleOnboarded}
+        />
+      </div>
+    )
+  }
+
+  if (!currentQuestion) {
+    return (
+      <div className="h-screen flex flex-col sql-app" data-step="app">
         <AmbientBackground />
         <FloatingParticles />
         <div className="shrink-0 p-2 pb-0">
@@ -268,7 +316,7 @@ export default function SQLNavigatorPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex flex-col sql-app" data-step="app">
       <AmbientBackground />
       <FloatingParticles />
 

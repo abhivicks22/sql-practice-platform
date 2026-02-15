@@ -181,7 +181,7 @@ export function RightPanel({ starterCode, questionId }: RightPanelProps) {
               <button
                 onClick={handleRun}
                 disabled={isRunning || isEvaluating}
-                className="relative flex items-center gap-2 px-5 py-2 rounded-lg bg-cyan text-background text-sm font-semibold hover:opacity-90 disabled:opacity-60 transition-all"
+                className="btn-space-primary relative flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold disabled:opacity-60 transition-all"
               >
                 <Play className="h-4 w-4" />
                 {isRunning ? "Running..." : "Run Code"}
@@ -189,7 +189,7 @@ export function RightPanel({ starterCode, questionId }: RightPanelProps) {
               <button
                 onClick={handleEvaluate}
                 disabled={isRunning || isEvaluating}
-                className="flex items-center gap-2 px-5 py-2 rounded-lg border border-border/50 text-sm font-medium text-muted-foreground hover:text-foreground hover:border-cyan/30 hover:bg-cyan/5 transition-all disabled:opacity-50"
+                className="btn-space flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-all"
               >
                 <Send className="h-4 w-4" />
                 {isEvaluating ? "Evaluating..." : "Evaluate"}

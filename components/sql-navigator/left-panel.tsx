@@ -129,7 +129,7 @@ export function LeftPanel({
         <button
           onClick={onPrevious}
           disabled={!hasPrevious}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-border/50 text-muted-foreground hover:text-foreground hover:border-cyan/30 hover:bg-cyan/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          className="btn-space flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium disabled:opacity-30 disabled:cursor-not-allowed transition-all"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
           Previous
@@ -140,7 +140,7 @@ export function LeftPanel({
         <button
           onClick={onNext}
           disabled={!hasNext}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-border/50 text-muted-foreground hover:text-foreground hover:border-cyan/30 hover:bg-cyan/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          className="btn-space flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium disabled:opacity-30 disabled:cursor-not-allowed transition-all"
         >
           Next
           <ChevronRight className="h-3.5 w-3.5" />
