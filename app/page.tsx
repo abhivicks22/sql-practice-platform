@@ -18,12 +18,52 @@ import type { ThemeId } from "@/contexts/theme-context"
 const ONBOARDED_KEY = "sql-navigator-onboarded"
 type FlowStep = "welcome" | "theme" | "app"
 
+const THEME_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"]
+
+/** Optional theme image from public/themes/{id}.jpg or public/pics/{id}.jpg - makes the background livelier when present */
+function ThemeBackgroundImage() {
+  const { theme } = useTheme()
+  const [visible, setVisible] = useState(false)
+  const [attempt, setAttempt] = useState({ path: "themes", ext: 0 })
+
+  const path = attempt.path === "themes" ? "/themes" : "/pics"
+  const ext = THEME_IMAGE_EXTENSIONS[attempt.ext]
+  const src = `${path}/${theme}${ext}`
+
+  useEffect(() => {
+    setVisible(false)
+    setAttempt({ path: "themes", ext: 0 })
+  }, [theme])
+
+  const handleError = () => {
+    if (attempt.ext < THEME_IMAGE_EXTENSIONS.length - 1) {
+      setAttempt((a) => ({ ...a, ext: a.ext + 1 }))
+    } else if (attempt.path === "themes") {
+      setAttempt({ path: "pics", ext: 0 })
+    } else {
+      setVisible(false)
+    }
+  }
+
+  return (
+    <img
+      src={src}
+      alt=""
+      className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700"
+      style={{ opacity: visible ? 0.22 : 0, pointerEvents: "none" }}
+      onLoad={() => setVisible(true)}
+      onError={handleError}
+    />
+  )
+}
+
 function AmbientBackground() {
   const { theme } = useTheme()
 
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-background" />
+      <ThemeBackgroundImage />
+      <div className="absolute inset-0 bg-gradient-to-b from-background/95 via-background/90 to-background" />
 
       {/* Base orbs – all themes */}
       <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-[hsl(var(--cyan)_/_0.04)] blur-[120px] animate-pulse" />
@@ -233,6 +273,15 @@ export default function SQLNavigatorPage() {
     setFlowStep("app")
   }
 
+  const handleStartOver = () => {
+    try {
+      localStorage.removeItem(ONBOARDED_KEY)
+    } catch {
+      // ignore
+    }
+    setFlowStep("welcome")
+  }
+
   const filteredQuestions = useMemo(() => {
     return questions.filter((q) => {
       const matchCategory =
@@ -299,6 +348,7 @@ export default function SQLNavigatorPage() {
             onCategoryChange={handleCategoryChange}
             selectedDifficulty={selectedDifficulty}
             onDifficultyChange={handleDifficultyChange}
+            onStartOver={handleStartOver}
           />
         </div>
         <div className="flex-1 flex items-center justify-center">
@@ -327,6 +377,7 @@ export default function SQLNavigatorPage() {
           onCategoryChange={handleCategoryChange}
           selectedDifficulty={selectedDifficulty}
           onDifficultyChange={handleDifficultyChange}
+          onStartOver={handleStartOver}
         />
       </div>
 

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Database, ChevronDown, Palette } from "lucide-react"
+import { Database, ChevronDown, Palette, Home } from "lucide-react"
 import { categories, difficulties } from "@/lib/sql-data"
 import { useTheme, THEMES } from "@/contexts/theme-context"
 
@@ -10,6 +10,8 @@ interface HeaderProps {
   onCategoryChange: (category: string) => void
   selectedDifficulty: string
   onDifficultyChange: (difficulty: string) => void
+  /** When set, shows a "Start over" button that returns to the welcome flow */
+  onStartOver?: () => void
 }
 
 const difficultyColors: Record<string, { active: string; inactive: string }> = {
@@ -40,6 +42,7 @@ export function Header({
   onCategoryChange,
   selectedDifficulty,
   onDifficultyChange,
+  onStartOver,
 }: HeaderProps) {
   const { theme, setTheme } = useTheme()
   const [patternOpen, setPatternOpen] = useState(false)
@@ -76,7 +79,19 @@ export function Header({
             v2.0
           </span>
         </div>
-        <nav className="relative" ref={themeRef} aria-label="Theme">
+        <nav className="flex items-center gap-2">
+          {onStartOver && (
+            <button
+              type="button"
+              onClick={onStartOver}
+              className="btn-space flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all"
+              title="Start over (back to welcome)"
+            >
+              <Home className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Start over</span>
+            </button>
+          )}
+          <div className="relative" ref={themeRef} aria-label="Theme">
           <button
             type="button"
             onClick={() => setThemeOpen((o) => !o)}
@@ -107,6 +122,7 @@ export function Header({
               ))}
             </div>
           )}
+          </div>
         </nav>
       </div>
 

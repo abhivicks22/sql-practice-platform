@@ -54,8 +54,8 @@ export function ThemeSelectionView({
                   relative flex flex-col items-start p-5 rounded-xl border-2 text-left transition-all duration-300
                   animate-in fade-in-0 slide-in-from-bottom-2
                   ${isSelected
-                    ? "border-cyan bg-cyan/10 shadow-lg shadow-cyan/10"
-                    : "border-border/50 bg-card/60 hover:border-cyan/40 hover:bg-card/80"
+                    ? "border-cyan bg-cyan/10 shadow-lg shadow-cyan/10 scale-[1.02]"
+                    : "border-border/50 bg-card/60 hover:border-cyan/40 hover:bg-card/80 hover:scale-[1.01]"
                   }
                 `}
                 style={{ animationDelay: `${i * 60}ms`, animationFillMode: "backwards" }}
@@ -91,7 +91,7 @@ export function ThemeSelectionView({
           <button
             type="button"
             onClick={onContinue}
-            className="flex-1 px-6 py-3 rounded-xl text-base font-semibold bg-cyan text-primary-foreground hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-cyan focus:ring-offset-2 focus:ring-offset-background transition-all shadow-lg shadow-cyan/20"
+            className="flex-1 px-6 py-3 rounded-xl text-base font-semibold bg-cyan text-primary-foreground hover:opacity-90 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-cyan focus:ring-offset-2 focus:ring-offset-background transition-all shadow-lg shadow-cyan/20 active:scale-[0.98]"
           >
             Continue
           </button>
