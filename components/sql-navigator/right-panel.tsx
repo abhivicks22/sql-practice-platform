@@ -8,6 +8,9 @@ import {
   Copy,
   Check,
   RotateCcw,
+  Timer as TimerIcon,
+  Pause,
+  RotateCcw as ResetIcon,
 } from "lucide-react"
 import {
   ResizablePanelGroup,
@@ -37,6 +40,31 @@ export function RightPanel({ starterCode, questionId }: RightPanelProps) {
   const [isRunning, setIsRunning] = useState(false)
   const [isEvaluating, setIsEvaluating] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [timerElapsed, setTimerElapsed] = useState(0)
+  const [timerRunning, setTimerRunning] = useState(false)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    if (!timerRunning) return
+    timerRef.current = setInterval(() => {
+      setTimerElapsed((s) => s + 1)
+    }, 1000)
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+      timerRef.current = null
+    }
+  }, [timerRunning])
+
+  const timerStart = () => setTimerRunning(true)
+  const timerPause = () => setTimerRunning(false)
+  const timerReset = () => {
+    setTimerRunning(false)
+    setTimerElapsed(0)
+  }
+  const timerDisplay = `${Math.floor(timerElapsed / 60)
+    .toString()
+    .padStart(2, "0")}:${(timerElapsed % 60).toString().padStart(2, "0")}`
+
   const [questionData, setQuestionData] = useState<{
     sampleData: string
     systemSolution: string
@@ -160,8 +188,8 @@ export function RightPanel({ starterCode, questionId }: RightPanelProps) {
               <div className="flex items-center gap-2">
                 <div className="flex gap-1.5">
                   <div className="h-2.5 w-2.5 rounded-full bg-red-500/60" />
-                  <div className="h-2.5 w-2.5 rounded-full bg-amber-500/60" />
-                  <div className="h-2.5 w-2.5 rounded-full bg-emerald-500/60" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-orange-500/60" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-cyan/60" />
                 </div>
                 <span className="text-xs font-mono text-muted-foreground ml-2">query.sql</span>
               </div>
@@ -170,16 +198,40 @@ export function RightPanel({ starterCode, questionId }: RightPanelProps) {
                   <RotateCcw className="h-3.5 w-3.5" />
                 </button>
                 <button onClick={handleCopy} className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors" title="Copy code">
-                  {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copied ? <Check className="h-3.5 w-3.5 text-cyan" /> : <Copy className="h-3.5 w-3.5" />}
                 </button>
               </div>
             </div>
             <div className="flex-1 min-h-0">
               <SqlEditor value={code} onChange={setCode} placeholder="Write your SQL query here..." />
             </div>
-            <div className="flex items-center gap-3 px-4 py-3 border-t border-border/50 shrink-0">
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-border/50 shrink-0 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono text-muted-foreground flex items-center gap-1.5">
+                  <TimerIcon className="h-3.5 w-3.5" />
+                  {timerDisplay}
+                </span>
+                <button
+                  type="button"
+                  onClick={timerRunning ? timerPause : timerStart}
+                  className="btn-space flex items-center gap-1 px-2 py-1.5 rounded text-xs font-medium"
+                  title={timerRunning ? "Pause" : "Start"}
+                >
+                  {timerRunning ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                  {timerRunning ? "Pause" : "Start"}
+                </button>
+                <button
+                  type="button"
+                  onClick={timerReset}
+                  className="btn-space flex items-center gap-1 px-2 py-1.5 rounded text-xs font-medium"
+                  title="Reset"
+                >
+                  <ResetIcon className="h-3.5 w-3.5" />
+                  Reset
+                </button>
+              </div>
+              <div className="flex items-center gap-3">
               <button
-                onClick={handleRun}
                 disabled={isRunning || isEvaluating}
                 className="btn-space-primary relative flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold disabled:opacity-60 transition-all"
               >
@@ -194,6 +246,7 @@ export function RightPanel({ starterCode, questionId }: RightPanelProps) {
                 <Send className="h-4 w-4" />
                 {isEvaluating ? "Evaluating..." : "Evaluate"}
               </button>
+              </div>
             </div>
           </div>
         </ResizablePanel>
@@ -213,7 +266,7 @@ export function RightPanel({ starterCode, questionId }: RightPanelProps) {
                   key={i}
                   className={
                     line.startsWith(">") ? "text-cyan"
-                      : line.includes("✓") || line.includes("row(s)") ? "text-emerald-400"
+                      : line.includes("✓") || line.includes("row(s)") ? "text-cyan"
                       : line.includes("✗") || line.includes("Error") ? "text-red-400"
                       : "text-muted-foreground"
                   }

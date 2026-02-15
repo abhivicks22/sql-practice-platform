@@ -1,18 +1,36 @@
 "use client"
 
+import Image from "next/image"
+
 export function WelcomeView({ onGetStarted }: { onGetStarted: () => void }) {
   return (
     <div className="fixed inset-0 flex flex-col items-center justify-center z-20 animate-in fade-in-0 duration-500">
-      {/* Lively gradient orbs behind content */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-cyan/10 blur-[100px] animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-cyan/8 blur-[80px] animate-pulse" style={{ animationDelay: "1s" }} />
+      {/* Full-bleed background using your pic */}
+      <div className="absolute inset-0 -z-10">
+        <Image
+          src="/pics/universal.jpg"
+          alt=""
+          fill
+          className="object-cover"
+          priority
+          sizes="100vw"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/85 via-background/75 to-background/92" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_70%_at_50%_30%,transparent_40%,hsl(var(--background)_/_0.6)_100%)]" />
       </div>
-      <div className="relative text-center max-w-md px-6 animate-in zoom-in-95 duration-500" style={{ animationDelay: "100ms", animationFillMode: "backwards" }}>
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground glow-text mb-4">
+      {/* Decorative corner accents */}
+      <div className="absolute top-6 left-6 w-20 h-20 border-l-2 border-t-2 border-cyan/30 rounded-tl-xl" />
+      <div className="absolute bottom-6 right-6 w-16 h-16 border-r-2 border-b-2 border-cyan/20 rounded-br-xl" />
+      {/* Content card */}
+      <div className="relative text-center max-w-lg px-8 py-10 animate-in zoom-in-95 duration-500 rounded-2xl border border-border/50 bg-card/40 backdrop-blur-xl shadow-2xl" style={{ animationDelay: "100ms", animationFillMode: "backwards" }}>
+        <span className="inline-block px-3 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider text-cyan border border-cyan/30 bg-cyan/10 mb-6">
+          SQL Practice
+        </span>
+        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground glow-text mb-3">
           Welcome to SQL
         </h1>
-        <p className="text-muted-foreground text-lg mb-10 font-reading">
+        <div className="w-16 h-0.5 bg-gradient-to-r from-transparent via-cyan/50 to-transparent mx-auto mb-6" />
+        <p className="text-muted-foreground text-lg font-reading mb-8">
           Practice real-world queries. Run code. Get feedback.
         </p>
         <button

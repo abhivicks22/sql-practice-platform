@@ -20,12 +20,12 @@ const difficultyColors: Record<string, { active: string; inactive: string }> = {
     inactive: "text-muted-foreground hover:text-foreground hover:bg-secondary/60 border-transparent",
   },
   Easy: {
-    active: "bg-emerald-500/15 text-emerald-400 border-emerald-400/30",
-    inactive: "text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10 border-transparent",
+    active: "bg-cyan/15 text-cyan border-cyan/30",
+    inactive: "text-muted-foreground hover:text-cyan hover:bg-cyan/10 border-transparent",
   },
   Medium: {
-    active: "bg-amber-500/15 text-amber-400 border-amber-400/30",
-    inactive: "text-muted-foreground hover:text-amber-400 hover:bg-amber-500/10 border-transparent",
+    active: "bg-orange-500/15 text-orange-400 border-orange-400/30",
+    inactive: "text-muted-foreground hover:text-orange-400 hover:bg-orange-500/10 border-transparent",
   },
   Hard: {
     active: "bg-red-500/15 text-red-400 border-red-400/30",
@@ -64,7 +64,8 @@ export function Header({
   }, [])
 
   return (
-    <header className="glass-panel-strong px-6 py-3 flex flex-col gap-3">
+    <header className="glass-panel-strong px-6 py-3 flex flex-col gap-3 relative overflow-hidden">
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan/20 to-transparent" aria-hidden />
       {/* Top row: branding + theme */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">

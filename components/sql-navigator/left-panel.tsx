@@ -32,8 +32,8 @@ interface LeftPanelProps {
 }
 
 const difficultyColors: Record<Difficulty, string> = {
-  Easy: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-  Medium: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  Easy: "bg-cyan/15 text-cyan border-cyan/30",
+  Medium: "bg-orange-500/15 text-orange-400 border-orange-500/30",
   Hard: "bg-red-500/15 text-red-400 border-red-500/30",
   "Extreme Hard": "bg-purple-500/15 text-purple-400 border-purple-500/30",
 }
@@ -162,6 +162,7 @@ export function LeftPanel({
         <p className="text-xs text-muted-foreground mt-1 font-mono">
           {question.category}
         </p>
+        <div className="w-full h-px mt-3 bg-gradient-to-r from-cyan/30 via-cyan/10 to-transparent" />
       </div>
 
       {/* Tabs */}
@@ -327,7 +328,7 @@ export function LeftPanel({
                 className="flex items-center gap-3 w-full glass-panel px-4 py-3 text-left hover:bg-white/[0.02] transition-colors"
               >
                 {edgeCaseChecks[i] ? (
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                  <CheckCircle2 className="h-4 w-4 text-cyan shrink-0" />
                 ) : (
                   <Circle className="h-4 w-4 text-muted-foreground shrink-0" />
                 )}

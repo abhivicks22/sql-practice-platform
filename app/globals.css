@@ -67,30 +67,30 @@
     --secondary: 265 35% 10%;
   }
 
-  /* Theme: Avatar Pandora - precise bioluminescent */
+  /* Theme: Avatar Pandora - teal/cyan bioluminescent (no green) */
   [data-theme="avatar-pandora"] {
-    --background: 172 55% 3%;
-    --foreground: 168 25% 96%;
-    --card: 172 45% 5%;
-    --primary: 162 75% 50%;
-    --cyan: 162 75% 50%;
-    --cyan-glow: 158 85% 55%;
-    --border: 170 30% 12%;
-    --muted: 172 38% 8%;
-    --secondary: 172 42% 10%;
+    --background: 188 45% 3%;
+    --foreground: 185 25% 96%;
+    --card: 188 40% 5%;
+    --primary: 187 75% 50%;
+    --cyan: 187 75% 50%;
+    --cyan-glow: 185 85% 55%;
+    --border: 190 30% 12%;
+    --muted: 188 38% 8%;
+    --secondary: 188 42% 10%;
   }
 
-  /* Theme: Comet - precise amber/orange */
+  /* Theme: Comet - coral/orange (no yellow) */
   [data-theme="comet"] {
-    --background: 28 45% 3%;
-    --foreground: 32 25% 96%;
-    --card: 28 38% 5%;
-    --primary: 38 92% 58%;
-    --cyan: 38 92% 58%;
-    --cyan-glow: 42 98% 62%;
-    --border: 28 28% 12%;
-    --muted: 28 35% 8%;
-    --secondary: 28 38% 10%;
+    --background: 15 45% 3%;
+    --foreground: 20 25% 96%;
+    --card: 15 38% 5%;
+    --primary: 18 92% 55%;
+    --cyan: 18 92% 55%;
+    --cyan-glow: 22 98% 58%;
+    --border: 15 28% 12%;
+    --muted: 15 35% 8%;
+    --secondary: 15 38% 10%;
   }
 }
 
@@ -194,5 +194,15 @@
   }
   100% {
     background-position: 200% 50%;
+  }
+}
+
+/* Sliding pattern - diagonal stripes that move (theme-aligned, no green/yellow) */
+@keyframes slide-stripes {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 80px 0;
   }
 }

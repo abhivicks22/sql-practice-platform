@@ -108,11 +108,11 @@ export function SqlEditor({
                       t.type === "keyword"
                         ? "text-cyan"
                         : t.type === "string"
-                          ? "text-amber-400/90"
+                          ? "text-orange-400/90"
                           : t.type === "comment"
                             ? "text-muted-foreground/70"
                             : t.type === "number"
-                              ? "text-emerald-400/90"
+                              ? "text-cyan/90"
                               : "text-foreground/90"
                     }
                   >

@@ -46,14 +46,25 @@ function ThemeBackgroundImage() {
   }
 
   return (
-    <img
-      src={src}
-      alt=""
-      className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700"
-      style={{ opacity: visible ? 0.22 : 0, pointerEvents: "none" }}
-      onLoad={() => setVisible(true)}
-      onError={handleError}
-    />
+    <>
+      <img
+        src={src}
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700"
+        style={{ opacity: visible ? 0.35 : 0, pointerEvents: "none" }}
+        onLoad={() => setVisible(true)}
+        onError={handleError}
+      />
+      {visible && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          aria-hidden
+          style={{
+            background: "radial-gradient(ellipse 80% 80% at 50% 50%, transparent 50%, hsl(var(--background) / 0.4) 100%)",
+          }}
+        />
+      )}
+    </>
   )
 }
 
@@ -63,7 +74,7 @@ function AmbientBackground() {
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
       <ThemeBackgroundImage />
-      <div className="absolute inset-0 bg-gradient-to-b from-background/95 via-background/90 to-background" />
+      <div className="absolute inset-0 bg-gradient-to-b from-background/88 via-background/82 to-background/95" />
 
       {/* Base orbs – all themes */}
       <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-[hsl(var(--cyan)_/_0.04)] blur-[120px] animate-pulse" />
@@ -74,6 +85,15 @@ function AmbientBackground() {
       <div
         className="absolute top-[40%] right-[20%] w-[300px] h-[300px] rounded-full bg-[hsl(var(--cyan)_/_0.02)] blur-[80px]"
         style={{ animationDelay: "2s", animationDuration: "6s" }}
+      />
+
+      {/* Sliding pattern – diagonal stripes, theme color, no green/yellow */}
+      <div
+        className="absolute inset-0 opacity-[0.06] animate-[slide-stripes_20s_linear_infinite]"
+        style={{
+          backgroundImage: "repeating-linear-gradient(115deg, transparent 0px, transparent 2px, hsl(var(--cyan) / 0.35) 2px, hsl(var(--cyan) / 0.35) 4px)",
+          backgroundSize: "80px 80px",
+        }}
       />
 
       {/* Universal: tech grid + scan line */}
@@ -94,22 +114,22 @@ function AmbientBackground() {
         </>
       )}
 
-      {/* Avatar Pandora: bioluminescent blobs + soft glow */}
+      {/* Avatar Pandora: teal/cyan blobs (no green) */}
       {theme === "avatar-pandora" && (
         <>
-          <div className="absolute top-[20%] right-[10%] w-[400px] h-[400px] rounded-full bg-[hsl(162_70%_45%_/_0.06)] blur-[100px] animate-pulse" style={{ animationDelay: "0.5s", animationDuration: "5s" }} />
-          <div className="absolute bottom-[25%] left-[5%] w-[350px] h-[350px] rounded-full bg-[hsl(175_60%_50%_/_0.05)] blur-[90px] animate-pulse" style={{ animationDelay: "2s", animationDuration: "7s" }} />
-          <div className="absolute top-[60%] left-[40%] w-[200px] h-[200px] rounded-full bg-[hsl(165_80%_50%_/_0.04)] blur-[60px] animate-pulse" style={{ animationDelay: "1s", animationDuration: "4s" }} />
-          <div className="absolute inset-0 opacity-40 bg-[radial-gradient(ellipse_70%_70%_at_30%_20%,hsl(162_60%_50%_/_0.08),transparent)]" />
+          <div className="absolute top-[20%] right-[10%] w-[400px] h-[400px] rounded-full bg-[hsl(187_70%_45%_/_0.06)] blur-[100px] animate-pulse" style={{ animationDelay: "0.5s", animationDuration: "5s" }} />
+          <div className="absolute bottom-[25%] left-[5%] w-[350px] h-[350px] rounded-full bg-[hsl(185_60%_50%_/_0.05)] blur-[90px] animate-pulse" style={{ animationDelay: "2s", animationDuration: "7s" }} />
+          <div className="absolute top-[60%] left-[40%] w-[200px] h-[200px] rounded-full bg-[hsl(188_80%_50%_/_0.04)] blur-[60px] animate-pulse" style={{ animationDelay: "1s", animationDuration: "4s" }} />
+          <div className="absolute inset-0 opacity-40 bg-[radial-gradient(ellipse_70%_70%_at_30%_20%,hsl(187_60%_50%_/_0.08),transparent)]" />
         </>
       )}
 
-      {/* Comet: warm streaks + trail glow */}
+      {/* Comet: coral/orange streaks (no yellow) */}
       {theme === "comet" && (
         <>
           <div className="absolute inset-0 opacity-[0.03] bg-[linear-gradient(105deg,transparent_0%,hsl(var(--cyan)_/_0.2)_25%,transparent_50%,hsl(var(--cyan)_/_0.15)_75%,transparent_100%)] bg-[length:200%_100%] animate-[comet-streak_25s_linear_infinite]" />
-          <div className="absolute top-0 right-0 w-[80%] h-[60%] bg-[radial-gradient(ellipse_80%_80%_at_100%_0%,hsl(38_90%_55%_/_0.08),transparent)]" />
-          <div className="absolute bottom-0 left-0 w-[50%] h-[50%] bg-[radial-gradient(ellipse_60%_60%_at_0%_100%,hsl(35_85%_50%_/_0.06),transparent)]" />
+          <div className="absolute top-0 right-0 w-[80%] h-[60%] bg-[radial-gradient(ellipse_80%_80%_at_100%_0%,hsl(18_90%_55%_/_0.08),transparent)]" />
+          <div className="absolute bottom-0 left-0 w-[50%] h-[50%] bg-[radial-gradient(ellipse_60%_60%_at_0%_100%,hsl(20_85%_50%_/_0.06),transparent)]" />
         </>
       )}
     </div>
@@ -154,8 +174,8 @@ function Starfield({ count }: { count: number }) {
 const PARTICLE_HSL: Record<ThemeId, { h: number; s: number; l: number }> = {
   universal: { h: 188, s: 95, l: 60 },
   "black-hole": { h: 270, s: 60, l: 55 },
-  "avatar-pandora": { h: 165, s: 80, l: 50 },
-  comet: { h: 35, s: 95, l: 58 },
+  "avatar-pandora": { h: 187, s: 80, l: 50 },
+  comet: { h: 18, s: 92, l: 55 },
 }
 
 function FloatingParticles() {
