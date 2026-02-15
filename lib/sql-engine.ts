@@ -64,16 +64,24 @@ export async function executeQuery(sql: string): Promise<QueryResult> {
   }
 }
 
+// Split multi-statement SQL into single statements (run one per exec to avoid "multiple commands" error)
+function splitStatements(sql: string): string[] {
+  return sql
+    .split(';')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && !/^\s*(--|$)/.test(s));
+}
+
 // Setup tables and sample data for a specific question
 export async function setupQuestionData(setupSQL: string): Promise<{ success: boolean; error?: string }> {
   try {
     if (!db) {
       await initDatabase();
     }
-    
-    // Execute setup SQL (CREATE TABLE + INSERT statements)
-    await db!.exec(setupSQL);
-    
+    const statements = splitStatements(setupSQL);
+    for (const stmt of statements) {
+      if (stmt) await db!.exec(stmt + ';');
+    }
     return { success: true };
   } catch (error) {
     return {

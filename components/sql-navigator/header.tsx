@@ -84,7 +84,7 @@ export function Header({
             <ChevronDown className={`h-3.5 w-3.5 transition-transform ${patternOpen ? "rotate-180" : ""}`} />
           </button>
           {patternOpen && (
-            <div className="absolute left-0 top-full mt-1 py-1 min-w-[140px] rounded-md border border-border/50 bg-background shadow-lg z-50">
+            <div className="absolute left-0 top-full mt-1 py-1 min-w-[140px] rounded-md border border-border/50 bg-background shadow-lg z-[100]">
               {categories.map((cat) => (
                 <button
                   key={cat}

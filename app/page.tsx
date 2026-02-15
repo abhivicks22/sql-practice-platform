@@ -210,8 +210,8 @@ export default function SQLNavigatorPage() {
       <AmbientBackground />
       <FloatingParticles />
 
-      {/* Header */}
-      <div className="shrink-0 p-2 pb-0">
+      {/* Header - z-10 so Pattern dropdown appears above main content */}
+      <div className="relative z-10 shrink-0 p-2 pb-0">
         <Header
           selectedCategory={selectedCategory}
           onCategoryChange={handleCategoryChange}
