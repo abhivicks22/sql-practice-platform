@@ -10,22 +10,51 @@ import {
   RotateCcw,
   Maximize2,
 } from "lucide-react"
+import {
+  resetDatabase,
+  setupQuestionData,
+  executeQuery,
+  evaluateQuery,
+  formatResultsAsTable,
+} from "@/lib/sql-engine"
 
 interface RightPanelProps {
   starterCode: string
+  questionId: number
 }
 
-export function RightPanel({ starterCode }: RightPanelProps) {
+export function RightPanel({ starterCode, questionId }: RightPanelProps) {
   const [code, setCode] = useState(starterCode)
   const [output, setOutput] = useState<string[]>([
     "-- SQL Navigator Console v2.0",
     "-- Ready. Write your query and press Run.",
   ])
   const [isRunning, setIsRunning] = useState(false)
+  const [isEvaluating, setIsEvaluating] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [questionData, setQuestionData] = useState<{
+    sampleData: string
+    systemSolution: string
+  } | null>(null)
   const consoleRef = useRef<HTMLDivElement>(null)
 
-  // Sync code when question changes
+  useEffect(() => {
+    let cancelled = false
+    fetch(`/api/question/${questionId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled && data.sampleData != null && data.systemSolution != null) {
+          setQuestionData({ sampleData: data.sampleData, systemSolution: data.systemSolution })
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setQuestionData(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [questionId])
+
   useEffect(() => {
     setCode(starterCode)
     setOutput([
@@ -34,7 +63,6 @@ export function RightPanel({ starterCode }: RightPanelProps) {
     ])
   }, [starterCode])
 
-  // Auto-scroll console
   useEffect(() => {
     if (consoleRef.current) {
       consoleRef.current.scrollTop = consoleRef.current.scrollHeight
@@ -43,34 +71,61 @@ export function RightPanel({ starterCode }: RightPanelProps) {
 
   const lineNumbers = code.split("\n")
 
-  const handleRun = useCallback(() => {
-    setIsRunning(true)
-    setOutput((prev) => [
-      ...prev,
-      "",
-      `> Executing query...`,
-    ])
-    setTimeout(() => {
-      setOutput((prev) => [
-        ...prev,
-        "  Query compiled successfully.",
-        "  Scanning 3 table(s)...",
-        "",
-        "  +----------------+-------------+----------+",
-        "  | department     | employee    | salary   |",
-        "  +----------------+-------------+----------+",
-        "  | Engineering    | Alice Chen  | 185000   |",
-        "  | Engineering    | Bob Kumar   | 172000   |",
-        "  | Engineering    | Carol Diaz  | 168500   |",
-        "  | Marketing      | Eve Walsh   | 145000   |",
-        "  | Marketing      | Frank Liu   | 138000   |",
-        "  +----------------+-------------+----------+",
-        "",
-        "  5 row(s) returned in 0.042s",
-      ])
-      setIsRunning(false)
-    }, 1200)
+  const appendOutput = useCallback((lines: string[]) => {
+    setOutput((prev) => [...prev, "", ...lines])
   }, [])
+
+  const handleRun = useCallback(async () => {
+    if (!questionData) {
+      appendOutput(["  Loading question data..."])
+      return
+    }
+    setIsRunning(true)
+    appendOutput([`> Executing query...`])
+    try {
+      await resetDatabase()
+      const setup = await setupQuestionData(questionData.sampleData)
+      if (!setup.success) {
+        appendOutput([`  Error: ${setup.error}`])
+        return
+      }
+      const result = await executeQuery(code)
+      const outLines = formatResultsAsTable(result)
+        .split("\n")
+        .map((line) => (line ? `  ${line}` : ""))
+      appendOutput(outLines)
+    } catch (e) {
+      appendOutput([`  Error: ${e instanceof Error ? e.message : "Run failed"}`])
+    } finally {
+      setIsRunning(false)
+    }
+  }, [questionData, code, appendOutput])
+
+  const handleEvaluate = useCallback(async () => {
+    if (!questionData) {
+      appendOutput(["  Loading question data..."])
+      return
+    }
+    setIsEvaluating(true)
+    appendOutput([`> Evaluating against solution...`])
+    try {
+      await resetDatabase()
+      const setup = await setupQuestionData(questionData.sampleData)
+      if (!setup.success) {
+        appendOutput([`  Error: ${setup.error}`])
+        return
+      }
+      const evaluation = await evaluateQuery(code, questionData.systemSolution)
+      const lines = evaluation.passed
+        ? [`  ✓ ${evaluation.message}`]
+        : [`  ✗ ${evaluation.message}`, ...(evaluation.differences || []).map((d) => `    ${d}`)]
+      appendOutput(lines)
+    } catch (e) {
+      appendOutput([`  Error: ${e instanceof Error ? e.message : "Evaluation failed"}`])
+    } finally {
+      setIsEvaluating(false)
+    }
+  }, [questionData, code, appendOutput])
 
   const handleCopy = () => {
     navigator.clipboard.writeText(code)
@@ -146,15 +201,19 @@ export function RightPanel({ starterCode }: RightPanelProps) {
       <div className="flex items-center gap-3 px-4 py-3 border-t border-border/50 border-b border-b-border/50">
         <button
           onClick={handleRun}
-          disabled={isRunning}
+          disabled={isRunning || isEvaluating}
           className="relative flex items-center gap-2 px-5 py-2 rounded-lg bg-cyan text-background text-sm font-semibold hover:bg-cyan-glow disabled:opacity-60 transition-all animate-glow-pulse"
         >
           <Play className="h-4 w-4" />
           {isRunning ? "Running..." : "Run Code"}
         </button>
-        <button className="flex items-center gap-2 px-5 py-2 rounded-lg border border-border/50 text-sm font-medium text-muted-foreground hover:text-foreground hover:border-cyan/30 hover:bg-cyan/5 transition-all">
+        <button
+          onClick={handleEvaluate}
+          disabled={isRunning || isEvaluating}
+          className="flex items-center gap-2 px-5 py-2 rounded-lg border border-border/50 text-sm font-medium text-muted-foreground hover:text-foreground hover:border-cyan/30 hover:bg-cyan/5 transition-all disabled:opacity-50"
+        >
           <Send className="h-4 w-4" />
-          Evaluate
+          {isEvaluating ? "Evaluating..." : "Evaluate"}
         </button>
       </div>
 
@@ -173,9 +232,9 @@ export function RightPanel({ starterCode }: RightPanelProps) {
               className={
                 line.startsWith(">")
                   ? "text-cyan"
-                  : line.includes("row(s)")
+                  : line.includes("✓") || line.includes("row(s)")
                     ? "text-emerald-400"
-                    : line.includes("Error")
+                    : line.includes("✗") || line.includes("Error")
                       ? "text-red-400"
                       : "text-muted-foreground"
               }

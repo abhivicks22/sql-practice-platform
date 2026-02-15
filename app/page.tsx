@@ -252,7 +252,7 @@ export default function SQLNavigatorPage() {
           {/* Right Panel - The Engine */}
           <ResizablePanel defaultSize={55} minSize={30}>
             <div className="h-full glass-panel overflow-hidden">
-              <RightPanel starterCode={currentQuestion.starterCode} />
+              <RightPanel starterCode={currentQuestion.starterCode} questionId={currentQuestion.id} />
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>
