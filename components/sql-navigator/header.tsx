@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Database, ChevronDown } from "lucide-react"
+import { Database, ChevronDown, Palette } from "lucide-react"
 import { categories, difficulties } from "@/lib/sql-data"
+import { useTheme, THEMES } from "@/contexts/theme-context"
 
 interface HeaderProps {
   selectedCategory: string
@@ -40,14 +41,20 @@ export function Header({
   selectedDifficulty,
   onDifficultyChange,
 }: HeaderProps) {
+  const { theme, setTheme } = useTheme()
   const [patternOpen, setPatternOpen] = useState(false)
+  const [diffOpen, setDiffOpen] = useState(false)
+  const [themeOpen, setThemeOpen] = useState(false)
   const patternRef = useRef<HTMLDivElement>(null)
+  const diffRef = useRef<HTMLDivElement>(null)
+  const themeRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (patternRef.current && !patternRef.current.contains(e.target as Node)) {
-        setPatternOpen(false)
-      }
+      const target = e.target as Node
+      if (patternRef.current && !patternRef.current.contains(target)) setPatternOpen(false)
+      if (diffRef.current && !diffRef.current.contains(target)) setDiffOpen(false)
+      if (themeRef.current && !themeRef.current.contains(target)) setThemeOpen(false)
     }
     document.addEventListener("click", handleClickOutside)
     return () => document.removeEventListener("click", handleClickOutside)
@@ -55,7 +62,7 @@ export function Header({
 
   return (
     <header className="glass-panel-strong px-6 py-3 flex flex-col gap-3">
-      {/* Top row: branding */}
+      {/* Top row: branding + theme */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -69,6 +76,38 @@ export function Header({
             v2.0
           </span>
         </div>
+        <nav className="relative" ref={themeRef} aria-label="Theme">
+          <button
+            type="button"
+            onClick={() => setThemeOpen((o) => !o)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border/50 bg-card/80 text-foreground hover:bg-secondary/60 hover:border-cyan/30 transition-all"
+          >
+            <Palette className="h-3.5 w-3.5 text-cyan" />
+            Theme
+            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${themeOpen ? "rotate-180" : ""}`} />
+          </button>
+          {themeOpen && (
+            <div className="absolute right-0 top-full mt-1 py-1 min-w-[160px] rounded-md border border-border/50 bg-background shadow-lg z-[100]">
+              {THEMES.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => {
+                    setTheme(t.id)
+                    setThemeOpen(false)
+                  }}
+                  className={`block w-full text-left px-3 py-2 text-xs font-medium transition-colors ${
+                    theme === t.id
+                      ? "bg-cyan/15 text-cyan"
+                      : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </nav>
       </div>
 
       {/* Bottom row: Pattern drill-down + Difficulty tabs */}
@@ -106,23 +145,39 @@ export function Header({
           )}
         </nav>
 
-        {/* Difficulty tabs */}
-        <nav className="flex items-center gap-1 shrink-0" aria-label="Difficulty filter">
-          {difficulties.map((diff) => {
-            const isActive = selectedDifficulty === diff
-            const colors = difficultyColors[diff]
-            return (
-              <button
-                key={diff}
-                onClick={() => onDifficultyChange(diff)}
-                className={`whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all border rounded-md ${
-                  isActive ? colors.active : colors.inactive
-                }`}
-              >
-                {diff}
-              </button>
-            )
-          })}
+        {/* Difficulty: drill-down like Pattern */}
+        <nav className="relative shrink-0" ref={diffRef} aria-label="Difficulty">
+          <button
+            type="button"
+            onClick={() => setDiffOpen((o) => !o)}
+            className={`flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all border rounded-md ${
+              difficultyColors[selectedDifficulty]?.active ?? "bg-cyan/15 text-cyan border-cyan/30"
+            }`}
+          >
+            {selectedDifficulty}
+            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${diffOpen ? "rotate-180" : ""}`} />
+          </button>
+          {diffOpen && (
+            <div className="absolute right-0 top-full mt-1 py-1 min-w-[120px] rounded-md border border-border/50 bg-background shadow-lg z-[100]">
+              {difficulties.map((diff) => (
+                <button
+                  key={diff}
+                  type="button"
+                  onClick={() => {
+                    onDifficultyChange(diff)
+                    setDiffOpen(false)
+                  }}
+                  className={`block w-full text-left px-3 py-2 text-xs font-medium transition-colors ${
+                    selectedDifficulty === diff
+                      ? difficultyColors[diff]?.active ?? "bg-cyan/15 text-cyan"
+                      : difficultyColors[diff]?.inactive ?? "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                  }`}
+                >
+                  {diff}
+                </button>
+              ))}
+            </div>
+          )}
         </nav>
       </div>
     </header>

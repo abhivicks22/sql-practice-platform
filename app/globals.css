@@ -40,6 +40,58 @@
     --cyan: 188 95% 43%;
     --cyan-glow: 188 100% 50%;
   }
+
+  /* Theme: Universal (default) */
+  [data-theme="universal"] {
+    --background: 222 84% 5%;
+    --foreground: 210 40% 92%;
+    --card: 222 60% 8%;
+    --primary: 188 95% 43%;
+    --cyan: 188 95% 43%;
+    --cyan-glow: 188 100% 50%;
+    --border: 215 30% 16%;
+    --muted: 222 40% 12%;
+    --secondary: 222 40% 14%;
+  }
+
+  /* Theme: Black Hole - deep space, violet accent */
+  [data-theme="black-hole"] {
+    --background: 260 40% 4%;
+    --foreground: 260 20% 92%;
+    --card: 260 35% 6%;
+    --primary: 270 60% 55%;
+    --cyan: 270 60% 55%;
+    --cyan-glow: 280 70% 60%;
+    --border: 260 25% 14%;
+    --muted: 260 30% 10%;
+    --secondary: 260 35% 12%;
+  }
+
+  /* Theme: Avatar Pandora - bioluminescent blue-green */
+  [data-theme="avatar-pandora"] {
+    --background: 175 50% 4%;
+    --foreground: 170 30% 92%;
+    --card: 175 45% 6%;
+    --primary: 165 80% 45%;
+    --cyan: 165 80% 45%;
+    --cyan-glow: 160 90% 50%;
+    --border: 170 35% 14%;
+    --muted: 175 40% 10%;
+    --secondary: 175 42% 12%;
+  }
+
+  /* Theme: Comet - warm amber trail */
+  [data-theme="comet"] {
+    --background: 25 40% 5%;
+    --foreground: 30 30% 92%;
+    --card: 25 35% 7%;
+    --primary: 35 95% 55%;
+    --cyan: 35 95% 55%;
+    --cyan-glow: 40 100% 60%;
+    --border: 25 30% 15%;
+    --muted: 25 35% 10%;
+    --secondary: 25 38% 12%;
+  }
 }
 
 @layer base {

@@ -10,50 +10,43 @@ import {
   ResizableHandle,
 } from "@/components/ui/resizable"
 import { questions, categories } from "@/lib/sql-data"
+import { useTheme } from "@/contexts/theme-context"
+import type { ThemeId } from "@/contexts/theme-context"
 
 function AmbientBackground() {
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
-      {/* Base gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-background" />
-
-      {/* Bioluminescent orbs */}
-      <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-cyan/[0.03] blur-[120px] animate-pulse" />
+      <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-[hsl(var(--cyan)_/_0.03)] blur-[120px] animate-pulse" />
       <div
-        className="absolute bottom-[-15%] right-[-5%] w-[500px] h-[500px] rounded-full bg-cyan/[0.025] blur-[100px]"
+        className="absolute bottom-[-15%] right-[-5%] w-[500px] h-[500px] rounded-full bg-[hsl(var(--cyan)_/_0.025)] blur-[100px]"
         style={{ animationDelay: "1s", animationDuration: "4s" }}
       />
       <div
-        className="absolute top-[40%] right-[20%] w-[300px] h-[300px] rounded-full bg-cyan/[0.015] blur-[80px]"
+        className="absolute top-[40%] right-[20%] w-[300px] h-[300px] rounded-full bg-[hsl(var(--cyan)_/_0.015)] blur-[80px]"
         style={{ animationDelay: "2s", animationDuration: "6s" }}
       />
-
-      {/* Grid overlay */}
       <div
-        className="absolute inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage: `
-            linear-gradient(hsl(188 95% 43% / 0.3) 1px, transparent 1px),
-            linear-gradient(90deg, hsl(188 95% 43% / 0.3) 1px, transparent 1px)
-          `,
-          backgroundSize: "60px 60px",
-        }}
+        className="absolute inset-0 opacity-[0.03] bg-[length:60px_60px] bg-[linear-gradient(hsl(var(--cyan)_/_0.3)_1px,transparent_1px),linear-gradient(90deg,hsl(var(--cyan)_/_0.3)_1px,transparent_1px)]"
       />
-
-      {/* Scan line effect */}
       <div
-        className="absolute inset-0 opacity-[0.015]"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(0deg, transparent, transparent 2px, hsl(188 95% 43% / 0.1) 2px, hsl(188 95% 43% / 0.1) 4px)",
-        }}
+        className="absolute inset-0 opacity-[0.015] bg-[repeating-linear-gradient(0deg,transparent_0_2px,hsl(var(--cyan)_/_0.1)_2px_4px)]"
       />
     </div>
   )
 }
 
+const PARTICLE_HSL: Record<ThemeId, { h: number; s: number; l: number }> = {
+  universal: { h: 188, s: 95, l: 60 },
+  "black-hole": { h: 270, s: 60, l: 55 },
+  "avatar-pandora": { h: 165, s: 80, l: 50 },
+  comet: { h: 35, s: 95, l: 58 },
+}
+
 function FloatingParticles() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const { theme } = useTheme()
+  const { h, s, l } = PARTICLE_HSL[theme]
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -112,13 +105,12 @@ function FloatingParticles() {
 
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
-        ctx.fillStyle = `hsla(188, 95%, 60%, ${currentOpacity})`
+        ctx.fillStyle = `hsla(${h}, ${s}%, ${l}%, ${currentOpacity})`
         ctx.fill()
 
-        // Glow
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2)
-        ctx.fillStyle = `hsla(188, 95%, 50%, ${currentOpacity * 0.15})`
+        ctx.fillStyle = `hsla(${h}, ${s}%, ${Math.min(100, l - 10)}%, ${currentOpacity * 0.15})`
         ctx.fill()
       }
 
@@ -131,7 +123,7 @@ function FloatingParticles() {
       window.removeEventListener("resize", resize)
       cancelAnimationFrame(animFrame)
     }
-  }, [])
+  }, [h, s, l])
 
   return (
     <canvas

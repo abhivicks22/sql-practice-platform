@@ -64,12 +64,24 @@ export async function executeQuery(sql: string): Promise<QueryResult> {
   }
 }
 
-// Split multi-statement SQL into single statements (run one per exec to avoid "multiple commands" error)
+// Split multi-statement SQL into single statements (run one per exec/query to avoid "multiple commands" error)
 function splitStatements(sql: string): string[] {
   return sql
     .split(';')
     .map((s) => s.trim())
     .filter((s) => s.length > 0 && !/^\s*(--|$)/.test(s));
+}
+
+/** Run multiple SELECT/statements and return each result (for Run button with multi-statement input). */
+export async function executeMultipleQueries(sql: string): Promise<QueryResult[]> {
+  const statements = splitStatements(sql);
+  const results: QueryResult[] = [];
+  for (const stmt of statements) {
+    if (!stmt) continue;
+    const result = await executeQuery(stmt + ';');
+    results.push(result);
+  }
+  return results;
 }
 
 // Setup tables and sample data for a specific question

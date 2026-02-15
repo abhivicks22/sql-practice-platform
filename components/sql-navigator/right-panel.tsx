@@ -13,7 +13,7 @@ import {
 import {
   resetDatabase,
   setupQuestionData,
-  executeQuery,
+  executeMultipleQueries,
   evaluateQuery,
   formatResultsAsTable,
 } from "@/lib/sql-engine"
@@ -89,11 +89,19 @@ export function RightPanel({ starterCode, questionId }: RightPanelProps) {
         appendOutput([`  Error: ${setup.error}`])
         return
       }
-      const result = await executeQuery(code)
-      const outLines = formatResultsAsTable(result)
-        .split("\n")
-        .map((line) => (line ? `  ${line}` : ""))
-      appendOutput(outLines)
+      const results = await executeMultipleQueries(code)
+      if (results.length === 0) {
+        appendOutput(["  No statements to run (add at least one query ending with ;)."])
+        return
+      }
+      for (let i = 0; i < results.length; i++) {
+        if (i > 0) appendOutput([""])
+        appendOutput([`  --- Result ${i + 1} ---`])
+        const outLines = formatResultsAsTable(results[i])
+          .split("\n")
+          .map((line) => (line ? `  ${line}` : ""))
+        appendOutput(outLines)
+      }
     } catch (e) {
       appendOutput([`  Error: ${e instanceof Error ? e.message : "Run failed"}`])
     } finally {
@@ -106,6 +114,8 @@ export function RightPanel({ starterCode, questionId }: RightPanelProps) {
       appendOutput(["  Loading question data..."])
       return
     }
+    const firstStmt = code.split(';').map((s) => s.trim()).filter((s) => s.length > 0 && !/^\s*(--|$)/.test(s))[0]
+    const queryToEval = firstStmt ? firstStmt + ';' : code
     setIsEvaluating(true)
     appendOutput([`> Evaluating against solution...`])
     try {
@@ -115,7 +125,7 @@ export function RightPanel({ starterCode, questionId }: RightPanelProps) {
         appendOutput([`  Error: ${setup.error}`])
         return
       }
-      const evaluation = await evaluateQuery(code, questionData.systemSolution)
+      const evaluation = await evaluateQuery(queryToEval, questionData.systemSolution)
       const lines = evaluation.passed
         ? [`  ✓ ${evaluation.message}`]
         : [`  ✗ ${evaluation.message}`, ...(evaluation.differences || []).map((d) => `    ${d}`)]
