@@ -145,7 +145,6 @@ export default function SQLNavigatorPage() {
   const [selectedCategory, setSelectedCategory] = useState("All Patterns")
   const [selectedDifficulty, setSelectedDifficulty] = useState("All")
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [mastered, setMastered] = useState(14)
 
   const filteredQuestions = useMemo(() => {
     return questions.filter((q) => {
@@ -190,8 +189,6 @@ export default function SQLNavigatorPage() {
             onCategoryChange={handleCategoryChange}
             selectedDifficulty={selectedDifficulty}
             onDifficultyChange={handleDifficultyChange}
-            mastered={mastered}
-            total={questions.length}
           />
         </div>
         <div className="flex-1 flex items-center justify-center">
@@ -220,8 +217,6 @@ export default function SQLNavigatorPage() {
           onCategoryChange={handleCategoryChange}
           selectedDifficulty={selectedDifficulty}
           onDifficultyChange={handleDifficultyChange}
-          mastered={mastered}
-          total={questions.length}
         />
       </div>
 

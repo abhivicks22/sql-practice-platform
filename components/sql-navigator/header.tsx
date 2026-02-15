@@ -1,6 +1,7 @@
 "use client"
 
-import { Database, Zap } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
+import { Database, ChevronDown } from "lucide-react"
 import { categories, difficulties } from "@/lib/sql-data"
 
 interface HeaderProps {
@@ -8,8 +9,6 @@ interface HeaderProps {
   onCategoryChange: (category: string) => void
   selectedDifficulty: string
   onDifficultyChange: (difficulty: string) => void
-  mastered: number
-  total: number
 }
 
 const difficultyColors: Record<string, { active: string; inactive: string }> = {
@@ -40,14 +39,23 @@ export function Header({
   onCategoryChange,
   selectedDifficulty,
   onDifficultyChange,
-  mastered,
-  total,
 }: HeaderProps) {
-  const progress = (mastered / total) * 100
+  const [patternOpen, setPatternOpen] = useState(false)
+  const patternRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (patternRef.current && !patternRef.current.contains(e.target as Node)) {
+        setPatternOpen(false)
+      }
+    }
+    document.addEventListener("click", handleClickOutside)
+    return () => document.removeEventListener("click", handleClickOutside)
+  }, [])
 
   return (
     <header className="glass-panel-strong px-6 py-3 flex flex-col gap-3">
-      {/* Top row: branding + progress */}
+      {/* Top row: branding */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -61,43 +69,41 @@ export function Header({
             v2.0
           </span>
         </div>
-
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4 text-cyan" />
-            <span className="text-xs font-mono text-muted-foreground">
-              {mastered}/{total} Mastered
-            </span>
-          </div>
-          <div className="w-24 h-1.5 bg-secondary rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-cyan to-cyan-glow rounded-full transition-all duration-500"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
       </div>
 
-      {/* Bottom row: Pattern tabs + Difficulty tabs */}
+      {/* Bottom row: Pattern drill-down + Difficulty tabs */}
       <div className="flex items-center justify-between gap-4">
-        {/* Pattern / Category tabs */}
-        <nav className="flex items-center gap-1 overflow-x-auto scrollbar-thin" aria-label="SQL Pattern categories">
-          {categories.map((cat) => {
-            const isActive = selectedCategory === cat
-            return (
-              <button
-                key={cat}
-                onClick={() => onCategoryChange(cat)}
-                className={`relative whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all border rounded-md ${
-                  isActive
-                    ? "bg-cyan/15 text-cyan border-cyan/30 glow-border"
-                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/60 border-transparent"
-                }`}
-              >
-                {cat}
-              </button>
-            )
-          })}
+        {/* Pattern: one tab with dropdown (options from categories in sql-data) */}
+        <nav className="relative" ref={patternRef} aria-label="SQL Pattern">
+          <button
+            type="button"
+            onClick={() => setPatternOpen((o) => !o)}
+            className="flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all border rounded-md bg-cyan/15 text-cyan border-cyan/30"
+          >
+            {selectedCategory}
+            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${patternOpen ? "rotate-180" : ""}`} />
+          </button>
+          {patternOpen && (
+            <div className="absolute left-0 top-full mt-1 py-1 min-w-[140px] rounded-md border border-border/50 bg-background shadow-lg z-50">
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => {
+                    onCategoryChange(cat)
+                    setPatternOpen(false)
+                  }}
+                  className={`block w-full text-left px-3 py-2 text-xs font-medium transition-colors ${
+                    selectedCategory === cat
+                      ? "bg-cyan/15 text-cyan"
+                      : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          )}
         </nav>
 
         {/* Difficulty tabs */}

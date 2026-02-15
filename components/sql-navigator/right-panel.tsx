@@ -61,7 +61,7 @@ export function RightPanel({ starterCode, questionId }: RightPanelProps) {
       "-- SQL Navigator Console v2.0",
       "-- Ready. Write your query and press Run.",
     ])
-  }, [starterCode])
+  }, [starterCode, questionId])
 
   useEffect(() => {
     if (consoleRef.current) {
