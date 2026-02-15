@@ -8,8 +8,12 @@ import {
   Copy,
   Check,
   RotateCcw,
-  Maximize2,
 } from "lucide-react"
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable"
 import {
   resetDatabase,
   setupQuestionData,
@@ -17,6 +21,7 @@ import {
   evaluateQuery,
   formatResultsAsTable,
 } from "@/lib/sql-engine"
+import { SqlEditor } from "./sql-editor"
 
 interface RightPanelProps {
   starterCode: string
@@ -68,8 +73,6 @@ export function RightPanel({ starterCode, questionId }: RightPanelProps) {
       consoleRef.current.scrollTop = consoleRef.current.scrollHeight
     }
   }, [output])
-
-  const lineNumbers = code.split("\n")
 
   const appendOutput = useCallback((lines: string[]) => {
     setOutput((prev) => [...prev, "", ...lines])
@@ -149,111 +152,79 @@ export function RightPanel({ starterCode, questionId }: RightPanelProps) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Editor Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/50">
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1.5">
-            <div className="h-2.5 w-2.5 rounded-full bg-red-500/60" />
-            <div className="h-2.5 w-2.5 rounded-full bg-amber-500/60" />
-            <div className="h-2.5 w-2.5 rounded-full bg-emerald-500/60" />
+      <ResizablePanelGroup direction="vertical" className="flex-1 min-h-0">
+        {/* Top: Editor + controls */}
+        <ResizablePanel defaultSize={65} minSize={30} order={1}>
+          <div className="flex flex-col h-full">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/50">
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1.5">
+                  <div className="h-2.5 w-2.5 rounded-full bg-red-500/60" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-amber-500/60" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-emerald-500/60" />
+                </div>
+                <span className="text-xs font-mono text-muted-foreground ml-2">query.sql</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button onClick={handleReset} className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors" title="Reset code">
+                  <RotateCcw className="h-3.5 w-3.5" />
+                </button>
+                <button onClick={handleCopy} className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors" title="Copy code">
+                  {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 min-h-0">
+              <SqlEditor value={code} onChange={setCode} placeholder="Write your SQL query here..." />
+            </div>
+            <div className="flex items-center gap-3 px-4 py-3 border-t border-border/50 shrink-0">
+              <button
+                onClick={handleRun}
+                disabled={isRunning || isEvaluating}
+                className="relative flex items-center gap-2 px-5 py-2 rounded-lg bg-cyan text-background text-sm font-semibold hover:opacity-90 disabled:opacity-60 transition-all"
+              >
+                <Play className="h-4 w-4" />
+                {isRunning ? "Running..." : "Run Code"}
+              </button>
+              <button
+                onClick={handleEvaluate}
+                disabled={isRunning || isEvaluating}
+                className="flex items-center gap-2 px-5 py-2 rounded-lg border border-border/50 text-sm font-medium text-muted-foreground hover:text-foreground hover:border-cyan/30 hover:bg-cyan/5 transition-all disabled:opacity-50"
+              >
+                <Send className="h-4 w-4" />
+                {isEvaluating ? "Evaluating..." : "Evaluate"}
+              </button>
+            </div>
           </div>
-          <span className="text-xs font-mono text-muted-foreground ml-2">
-            query.sql
-          </span>
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={handleReset}
-            className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
-            title="Reset code"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-          </button>
-          <button
-            onClick={handleCopy}
-            className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
-            title="Copy code"
-          >
-            {copied ? (
-              <Check className="h-3.5 w-3.5 text-emerald-400" />
-            ) : (
-              <Copy className="h-3.5 w-3.5" />
-            )}
-          </button>
-        </div>
-      </div>
+        </ResizablePanel>
 
-      {/* Code Editor Area */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Line Numbers */}
-        <div className="py-4 px-3 text-right select-none border-r border-border/30 bg-background/40 overflow-hidden">
-          {lineNumbers.map((_, i) => (
-            <div
-              key={i}
-              className="text-[11px] font-mono leading-5 text-muted-foreground/50"
-            >
-              {i + 1}
+        <ResizableHandle withHandle className="shrink-0 bg-border/50 hover:bg-cyan/20 transition-colors data-[panel-group-direction=vertical]:py-1" />
+
+        {/* Bottom: Console - resizable up/down */}
+        <ResizablePanel defaultSize={35} minSize={15} order={2}>
+          <div className="flex flex-col h-full border-t border-border/30">
+            <div className="flex items-center gap-2 px-4 py-2 border-b border-border/30 bg-background/40 shrink-0">
+              <Terminal className="h-3.5 w-3.5 text-cyan" />
+              <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Console Output</span>
             </div>
-          ))}
-        </div>
-
-        {/* Editor */}
-        <textarea
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          spellCheck={false}
-          className="flex-1 bg-transparent resize-none p-4 text-[13px] font-mono leading-5 text-foreground/90 focus:outline-none scrollbar-thin placeholder:text-muted-foreground/30 caret-cyan"
-          placeholder="Write your SQL query here..."
-        />
-      </div>
-
-      {/* Control Panel */}
-      <div className="flex items-center gap-3 px-4 py-3 border-t border-border/50 border-b border-b-border/50">
-        <button
-          onClick={handleRun}
-          disabled={isRunning || isEvaluating}
-          className="relative flex items-center gap-2 px-5 py-2 rounded-lg bg-cyan text-background text-sm font-semibold hover:bg-cyan-glow disabled:opacity-60 transition-all animate-glow-pulse"
-        >
-          <Play className="h-4 w-4" />
-          {isRunning ? "Running..." : "Run Code"}
-        </button>
-        <button
-          onClick={handleEvaluate}
-          disabled={isRunning || isEvaluating}
-          className="flex items-center gap-2 px-5 py-2 rounded-lg border border-border/50 text-sm font-medium text-muted-foreground hover:text-foreground hover:border-cyan/30 hover:bg-cyan/5 transition-all disabled:opacity-50"
-        >
-          <Send className="h-4 w-4" />
-          {isEvaluating ? "Evaluating..." : "Evaluate"}
-        </button>
-      </div>
-
-      {/* Console Output */}
-      <div className="h-52 flex flex-col border-t border-border/30">
-        <div className="flex items-center gap-2 px-4 py-2 border-b border-border/30 bg-background/40">
-          <Terminal className="h-3.5 w-3.5 text-cyan" />
-          <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-            Console Output
-          </span>
-        </div>
-        <div ref={consoleRef} className="flex-1 overflow-y-auto scrollbar-thin p-4 bg-background/60 font-mono text-xs leading-5">
-          {output.map((line, i) => (
-            <div
-              key={i}
-              className={
-                line.startsWith(">")
-                  ? "text-cyan"
-                  : line.includes("✓") || line.includes("row(s)")
-                    ? "text-emerald-400"
-                    : line.includes("✗") || line.includes("Error")
-                      ? "text-red-400"
+            <div ref={consoleRef} className="flex-1 overflow-y-auto scrollbar-thin p-4 bg-background/60 font-mono text-xs leading-5">
+              {output.map((line, i) => (
+                <div
+                  key={i}
+                  className={
+                    line.startsWith(">") ? "text-cyan"
+                      : line.includes("✓") || line.includes("row(s)") ? "text-emerald-400"
+                      : line.includes("✗") || line.includes("Error") ? "text-red-400"
                       : "text-muted-foreground"
-              }
-            >
-              {line || "\u00A0"}
+                  }
+                >
+                  {line || "\u00A0"}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   )
 }

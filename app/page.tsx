@@ -14,24 +14,94 @@ import { useTheme } from "@/contexts/theme-context"
 import type { ThemeId } from "@/contexts/theme-context"
 
 function AmbientBackground() {
+  const { theme } = useTheme()
+
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-background" />
-      <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-[hsl(var(--cyan)_/_0.03)] blur-[120px] animate-pulse" />
+
+      {/* Base orbs – all themes */}
+      <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-[hsl(var(--cyan)_/_0.04)] blur-[120px] animate-pulse" />
       <div
-        className="absolute bottom-[-15%] right-[-5%] w-[500px] h-[500px] rounded-full bg-[hsl(var(--cyan)_/_0.025)] blur-[100px]"
+        className="absolute bottom-[-15%] right-[-5%] w-[500px] h-[500px] rounded-full bg-[hsl(var(--cyan)_/_0.03)] blur-[100px]"
         style={{ animationDelay: "1s", animationDuration: "4s" }}
       />
       <div
-        className="absolute top-[40%] right-[20%] w-[300px] h-[300px] rounded-full bg-[hsl(var(--cyan)_/_0.015)] blur-[80px]"
+        className="absolute top-[40%] right-[20%] w-[300px] h-[300px] rounded-full bg-[hsl(var(--cyan)_/_0.02)] blur-[80px]"
         style={{ animationDelay: "2s", animationDuration: "6s" }}
       />
-      <div
-        className="absolute inset-0 opacity-[0.03] bg-[length:60px_60px] bg-[linear-gradient(hsl(var(--cyan)_/_0.3)_1px,transparent_1px),linear-gradient(90deg,hsl(var(--cyan)_/_0.3)_1px,transparent_1px)]"
-      />
-      <div
-        className="absolute inset-0 opacity-[0.015] bg-[repeating-linear-gradient(0deg,transparent_0_2px,hsl(var(--cyan)_/_0.1)_2px_4px)]"
-      />
+
+      {/* Universal: tech grid + scan line */}
+      {theme === "universal" && (
+        <>
+          <div className="absolute inset-0 opacity-[0.04] bg-[length:60px_60px] bg-[linear-gradient(hsl(var(--cyan)_/_0.4)_1px,transparent_1px),linear-gradient(90deg,hsl(var(--cyan)_/_0.4)_1px,transparent_1px)]" />
+          <div className="absolute inset-0 opacity-[0.02] bg-[repeating-linear-gradient(0deg,transparent_0_2px,hsl(var(--cyan)_/_0.15)_2px_4px)]" />
+          <div className="absolute inset-0 opacity-30 bg-[radial-gradient(ellipse_80%_50%_at_50%_0%,hsl(var(--cyan)_/_0.06),transparent)]" />
+        </>
+      )}
+
+      {/* Black Hole: starfield + deep vignette */}
+      {theme === "black-hole" && (
+        <>
+          <Starfield count={80} />
+          <div className="absolute inset-0 opacity-80 bg-[radial-gradient(ellipse_100%_100%_at_50%_50%,transparent_40%,hsl(265_50%_2%_/_0.9))]" />
+          <div className="absolute bottom-0 left-0 right-0 h-[40%] bg-gradient-to-t from-[hsl(275_60%_8%_/_0.5)] to-transparent" />
+        </>
+      )}
+
+      {/* Avatar Pandora: bioluminescent blobs + soft glow */}
+      {theme === "avatar-pandora" && (
+        <>
+          <div className="absolute top-[20%] right-[10%] w-[400px] h-[400px] rounded-full bg-[hsl(162_70%_45%_/_0.06)] blur-[100px] animate-pulse" style={{ animationDelay: "0.5s", animationDuration: "5s" }} />
+          <div className="absolute bottom-[25%] left-[5%] w-[350px] h-[350px] rounded-full bg-[hsl(175_60%_50%_/_0.05)] blur-[90px] animate-pulse" style={{ animationDelay: "2s", animationDuration: "7s" }} />
+          <div className="absolute top-[60%] left-[40%] w-[200px] h-[200px] rounded-full bg-[hsl(165_80%_50%_/_0.04)] blur-[60px] animate-pulse" style={{ animationDelay: "1s", animationDuration: "4s" }} />
+          <div className="absolute inset-0 opacity-40 bg-[radial-gradient(ellipse_70%_70%_at_30%_20%,hsl(162_60%_50%_/_0.08),transparent)]" />
+        </>
+      )}
+
+      {/* Comet: warm streaks + trail glow */}
+      {theme === "comet" && (
+        <>
+          <div className="absolute inset-0 opacity-[0.03] bg-[linear-gradient(105deg,transparent_0%,hsl(var(--cyan)_/_0.2)_25%,transparent_50%,hsl(var(--cyan)_/_0.15)_75%,transparent_100%)] bg-[length:200%_100%] animate-[comet-streak_25s_linear_infinite]" />
+          <div className="absolute top-0 right-0 w-[80%] h-[60%] bg-[radial-gradient(ellipse_80%_80%_at_100%_0%,hsl(38_90%_55%_/_0.08),transparent)]" />
+          <div className="absolute bottom-0 left-0 w-[50%] h-[50%] bg-[radial-gradient(ellipse_60%_60%_at_0%_100%,hsl(35_85%_50%_/_0.06),transparent)]" />
+        </>
+      )}
+    </div>
+  )
+}
+
+function Starfield({ count }: { count: number }) {
+  const [stars, setStars] = useState<{ x: number; y: number; size: number; opacity: number; duration: number; delay: number }[]>([])
+  useEffect(() => {
+    setStars(
+      Array.from({ length: count }, () => ({
+        x: Math.random() * 100,
+        y: Math.random() * 100,
+        size: Math.random() * 1.5 + 0.5,
+        opacity: Math.random() * 0.5 + 0.25,
+        duration: 2 + Math.random() * 3,
+        delay: Math.random() * 2,
+      }))
+    )
+  }, [count])
+  return (
+    <div className="absolute inset-0">
+      {stars.map((s, i) => (
+        <div
+          key={i}
+          className="absolute rounded-full bg-white animate-pulse"
+          style={{
+            left: `${s.x}%`,
+            top: `${s.y}%`,
+            width: s.size,
+            height: s.size,
+            opacity: s.opacity,
+            animationDuration: `${s.duration}s`,
+            animationDelay: `${s.delay}s`,
+          }}
+        />
+      ))}
     </div>
   )
 }

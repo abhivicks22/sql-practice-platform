@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import type { Question, Difficulty } from "@/lib/sql-data"
 import type { EdgeCase } from "@/lib/sql-data"
+import { ReadableText } from "./readable-text"
 
 interface LeftPanelProps {
   question: Question
@@ -188,9 +189,7 @@ export function LeftPanel({
       <div className="flex-1 overflow-y-auto scrollbar-thin p-4">
         {activeTab === "problem" && (
           <div className="space-y-4">
-            <p className="text-sm leading-relaxed text-foreground/90">
-              {question.problem}
-            </p>
+            <ReadableText text={question.problem} />
             <div className="space-y-3">
               <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 <Table className="h-3.5 w-3.5" />
@@ -248,9 +247,11 @@ export function LeftPanel({
                 </button>
                 {openSolution === i && (
                   <div className="px-4 pb-4 space-y-3 border-t border-border/30">
-                    <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
-                      {sol.description}
-                    </p>
+                    {sol.description && (
+                      <p className="font-reading text-[15px] text-muted-foreground mt-3 leading-relaxed">
+                        {sol.description}
+                      </p>
+                    )}
                     <pre className="bg-background/80 rounded-md p-3 text-xs font-mono text-foreground/90 overflow-x-auto scrollbar-thin leading-relaxed">
                       <code>{sol.code}</code>
                     </pre>
@@ -283,22 +284,18 @@ export function LeftPanel({
                 <TrendingUp className="h-3.5 w-3.5" />
                 Business Impact
               </h3>
-              <p className="text-sm leading-relaxed text-foreground/80">
-                {displayedBusinessImpact}
-              </p>
+              <ReadableText text={displayedBusinessImpact} className="text-foreground/85" />
             </div>
             <div className="glass-panel p-4 space-y-3">
               <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-cyan">
                 <Sparkles className="h-3.5 w-3.5" />
                 Optimization Tips
               </h3>
-              <ul className="space-y-2">
+              <ul className="space-y-2.5 list-none pl-0">
                 {displayedOptimizationTips.map((tip, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <span className="mt-1 h-1.5 w-1.5 rounded-full bg-cyan shrink-0" />
-                    <span className="text-sm leading-relaxed text-foreground/80">
-                      {tip}
-                    </span>
+                  <li key={i} className="flex items-start gap-2 font-reading text-[15px] leading-relaxed text-foreground/85">
+                    <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-cyan shrink-0" />
+                    <span>{tip}</span>
                   </li>
                 ))}
               </ul>

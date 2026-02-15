@@ -41,56 +41,56 @@
     --cyan-glow: 188 100% 50%;
   }
 
-  /* Theme: Universal (default) */
+  /* Theme: Universal - clean, precise, SpaceX-inspired base */
   [data-theme="universal"] {
-    --background: 222 84% 5%;
-    --foreground: 210 40% 92%;
-    --card: 222 60% 8%;
-    --primary: 188 95% 43%;
-    --cyan: 188 95% 43%;
-    --cyan-glow: 188 100% 50%;
-    --border: 215 30% 16%;
-    --muted: 222 40% 12%;
-    --secondary: 222 40% 14%;
+    --background: 222 47% 4%;
+    --foreground: 210 30% 96%;
+    --card: 222 40% 6%;
+    --primary: 188 95% 48%;
+    --cyan: 188 95% 48%;
+    --cyan-glow: 188 100% 55%;
+    --border: 215 25% 14%;
+    --muted: 222 35% 11%;
+    --secondary: 222 38% 12%;
   }
 
-  /* Theme: Black Hole - deep space, violet accent */
+  /* Theme: Black Hole - deep space, precise violet */
   [data-theme="black-hole"] {
-    --background: 260 40% 4%;
-    --foreground: 260 20% 92%;
-    --card: 260 35% 6%;
-    --primary: 270 60% 55%;
-    --cyan: 270 60% 55%;
-    --cyan-glow: 280 70% 60%;
-    --border: 260 25% 14%;
-    --muted: 260 30% 10%;
-    --secondary: 260 35% 12%;
+    --background: 265 45% 3%;
+    --foreground: 260 15% 96%;
+    --card: 265 35% 5%;
+    --primary: 275 65% 58%;
+    --cyan: 275 65% 58%;
+    --cyan-glow: 280 70% 62%;
+    --border: 265 25% 12%;
+    --muted: 265 30% 8%;
+    --secondary: 265 35% 10%;
   }
 
-  /* Theme: Avatar Pandora - bioluminescent blue-green */
+  /* Theme: Avatar Pandora - precise bioluminescent */
   [data-theme="avatar-pandora"] {
-    --background: 175 50% 4%;
-    --foreground: 170 30% 92%;
-    --card: 175 45% 6%;
-    --primary: 165 80% 45%;
-    --cyan: 165 80% 45%;
-    --cyan-glow: 160 90% 50%;
-    --border: 170 35% 14%;
-    --muted: 175 40% 10%;
-    --secondary: 175 42% 12%;
+    --background: 172 55% 3%;
+    --foreground: 168 25% 96%;
+    --card: 172 45% 5%;
+    --primary: 162 75% 50%;
+    --cyan: 162 75% 50%;
+    --cyan-glow: 158 85% 55%;
+    --border: 170 30% 12%;
+    --muted: 172 38% 8%;
+    --secondary: 172 42% 10%;
   }
 
-  /* Theme: Comet - warm amber trail */
+  /* Theme: Comet - precise amber/orange */
   [data-theme="comet"] {
-    --background: 25 40% 5%;
-    --foreground: 30 30% 92%;
-    --card: 25 35% 7%;
-    --primary: 35 95% 55%;
-    --cyan: 35 95% 55%;
-    --cyan-glow: 40 100% 60%;
-    --border: 25 30% 15%;
-    --muted: 25 35% 10%;
-    --secondary: 25 38% 12%;
+    --background: 28 45% 3%;
+    --foreground: 32 25% 96%;
+    --card: 28 38% 5%;
+    --primary: 38 92% 58%;
+    --cyan: 38 92% 58%;
+    --cyan-glow: 42 98% 62%;
+    --border: 28 28% 12%;
+    --muted: 28 35% 8%;
+    --secondary: 28 38% 10%;
   }
 }
 
@@ -109,23 +109,27 @@
   }
 
   .glass-panel {
-    @apply bg-card/60 backdrop-blur-md border border-white/[0.06] rounded-lg;
+    @apply bg-card/70 backdrop-blur-md border rounded-lg;
+    border-color: hsl(var(--border) / 0.5);
+    box-shadow: 0 1px 0 0 hsl(var(--border) / 0.3);
   }
 
   .glass-panel-strong {
-    @apply bg-card/80 backdrop-blur-xl border border-white/[0.08] rounded-lg;
+    @apply bg-card/90 backdrop-blur-xl border rounded-lg;
+    border-color: hsl(var(--border) / 0.6);
+    box-shadow: 0 1px 0 0 hsl(var(--border) / 0.25);
   }
 
   .glow-text {
-    text-shadow: 0 0 20px hsl(188 95% 43% / 0.6), 0 0 40px hsl(188 95% 43% / 0.3);
+    text-shadow: 0 0 24px hsl(var(--cyan) / 0.35), 0 0 48px hsl(var(--cyan) / 0.15);
   }
 
   .glow-border {
-    box-shadow: 0 0 15px hsl(188 95% 43% / 0.15), inset 0 0 15px hsl(188 95% 43% / 0.05);
+    box-shadow: 0 0 0 1px hsl(var(--cyan) / 0.2), inset 0 0 0 1px hsl(var(--cyan) / 0.05);
   }
 
   .glow-button {
-    box-shadow: 0 0 20px hsl(188 95% 43% / 0.4), 0 0 40px hsl(188 95% 43% / 0.2);
+    box-shadow: 0 0 0 1px hsl(var(--cyan) / 0.3);
   }
 
   .scrollbar-thin::-webkit-scrollbar {
@@ -146,6 +150,12 @@
     background: hsl(215 30% 28%);
   }
 
+  .font-reading {
+    font-family: var(--font-source-sans), ui-sans-serif, sans-serif;
+    letter-spacing: 0.01em;
+    line-height: 1.65;
+  }
+
   .animate-float {
     animation: float 6s ease-in-out infinite;
   }
@@ -157,5 +167,14 @@
   }
   50% {
     transform: translateY(-6px);
+  }
+}
+
+@keyframes comet-streak {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
   }
 }

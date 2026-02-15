@@ -1,6 +1,6 @@
 import React from "react"
 import type { Metadata, Viewport } from 'next'
-import { Inter, JetBrains_Mono } from 'next/font/google'
+import { Inter, JetBrains_Mono, Source_Sans_3 } from 'next/font/google'
 
 import './globals.css'
 import { ThemeProvider } from "@/contexts/theme-context"
@@ -13,6 +13,12 @@ const inter = Inter({
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-jetbrains-mono',
+})
+
+const sourceSans = Source_Sans_3({
+  subsets: ['latin'],
+  variable: '--font-source-sans',
+  display: 'swap',
 })
 
 export const metadata: Metadata = {
@@ -30,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`} data-theme="universal">
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} ${sourceSans.variable}`} data-theme="universal">
       <body className="font-sans antialiased overflow-hidden">
         <ThemeProvider>{children}</ThemeProvider>
       </body>
