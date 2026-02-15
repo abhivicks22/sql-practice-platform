@@ -3,9 +3,9 @@
 import { createContext, useContext, useEffect, useState } from "react"
 
 export const THEMES = [
-  { id: "universal", label: "Universal" },
-  { id: "black-hole", label: "Black Hole" },
-  { id: "avatar-pandora", label: "Avatar Pandora" },
+  { id: "universal", label: "Nebula" },
+  { id: "black-hole", label: "Void" },
+  { id: "avatar-pandora", label: "Aurora" },
   { id: "comet", label: "Comet" },
 ] as const
 

@@ -120,34 +120,53 @@
     box-shadow: 0 1px 0 0 hsl(var(--border) / 0.25);
   }
 
-  .glow-text {
-    text-shadow: 0 0 24px hsl(var(--cyan) / 0.35), 0 0 48px hsl(var(--cyan) / 0.15);
+  .glow-border {
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.2), inset 0 0 0 1px hsl(var(--primary) / 0.05);
   }
 
-  .glow-border {
-    box-shadow: 0 0 0 1px hsl(var(--cyan) / 0.2), inset 0 0 0 1px hsl(var(--cyan) / 0.05);
+  /* Theme-based accent (replaces hardcoded cyan) */
+  .text-theme {
+    color: hsl(var(--primary));
+  }
+  .bg-theme-subtle {
+    background-color: hsl(var(--primary) / 0.15);
+  }
+  .border-theme {
+    border-color: hsl(var(--primary) / 0.3);
+  }
+  .hover\:text-theme:hover {
+    color: hsl(var(--primary));
+  }
+  .hover\:bg-theme-subtle:hover {
+    background-color: hsl(var(--primary) / 0.1);
+  }
+  .glow-text {
+    text-shadow: 0 0 24px hsl(var(--primary) / 0.35), 0 0 48px hsl(var(--primary) / 0.15);
   }
 
   .glow-button {
-    box-shadow: 0 0 0 1px hsl(var(--cyan) / 0.3);
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.3);
   }
 
-  /* Darker, space-like buttons (main app only) */
+  /* Darker, space-like buttons (main app only) – use theme primary */
   .sql-app .btn-space {
-    @apply bg-black/40 border border-cyan/20 text-foreground;
-    box-shadow: 0 0 0 1px hsl(var(--cyan) / 0.15), inset 0 1px 0 0 hsl(var(--cyan) / 0.05);
+    @apply bg-black/40 text-foreground;
+    border-color: hsl(var(--primary) / 0.2);
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.15), inset 0 1px 0 0 hsl(var(--primary) / 0.05);
   }
   .sql-app .btn-space:hover:not(:disabled) {
-    border-color: hsl(var(--cyan) / 0.4);
-    box-shadow: 0 0 12px hsl(var(--cyan) / 0.15), 0 0 0 1px hsl(var(--cyan) / 0.25);
+    border-color: hsl(var(--primary) / 0.4);
+    box-shadow: 0 0 12px hsl(var(--primary) / 0.15), 0 0 0 1px hsl(var(--primary) / 0.25);
   }
   .sql-app .btn-space-primary {
-    @apply bg-cyan/90 text-primary-foreground border border-cyan/50;
-    box-shadow: 0 0 0 1px hsl(var(--cyan) / 0.3), inset 0 1px 0 0 hsl(var(--cyan) / 0.2);
+    background-color: hsl(var(--primary) / 0.9);
+    color: hsl(var(--primary-foreground));
+    border-color: hsl(var(--primary) / 0.5);
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.3), inset 0 1px 0 0 hsl(var(--primary) / 0.2);
   }
   .sql-app .btn-space-primary:hover:not(:disabled) {
-    @apply bg-cyan;
-    box-shadow: 0 0 16px hsl(var(--cyan) / 0.35), 0 0 0 1px hsl(var(--cyan) / 0.4);
+    background-color: hsl(var(--primary));
+    box-shadow: 0 0 16px hsl(var(--primary) / 0.35), 0 0 0 1px hsl(var(--primary) / 0.4);
   }
 
   .scrollbar-thin::-webkit-scrollbar {

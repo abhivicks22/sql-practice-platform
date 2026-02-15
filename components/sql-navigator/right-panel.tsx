@@ -189,49 +189,47 @@ export function RightPanel({ starterCode, questionId }: RightPanelProps) {
                 <div className="flex gap-1.5">
                   <div className="h-2.5 w-2.5 rounded-full bg-red-500/60" />
                   <div className="h-2.5 w-2.5 rounded-full bg-orange-500/60" />
-                  <div className="h-2.5 w-2.5 rounded-full bg-cyan/60" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-[hsl(var(--primary)_/_0.6)]" />
                 </div>
                 <span className="text-xs font-mono text-muted-foreground ml-2">query.sql</span>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-mono text-red-500 flex items-center gap-1.5 tabular-nums" title="Timer">
+                  <TimerIcon className="h-3.5 w-3.5" />
+                  {timerDisplay}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={timerRunning ? timerPause : timerStart}
+                    className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                    title={timerRunning ? "Pause" : "Start"}
+                  >
+                    {timerRunning ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={timerReset}
+                    className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                    title="Reset timer"
+                  >
+                    <ResetIcon className="h-3.5 w-3.5" />
+                  </button>
+                </div>
                 <button onClick={handleReset} className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors" title="Reset code">
                   <RotateCcw className="h-3.5 w-3.5" />
                 </button>
                 <button onClick={handleCopy} className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors" title="Copy code">
-                  {copied ? <Check className="h-3.5 w-3.5 text-cyan" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copied ? <Check className="h-3.5 w-3.5 text-theme" /> : <Copy className="h-3.5 w-3.5" />}
                 </button>
               </div>
             </div>
             <div className="flex-1 min-h-0">
               <SqlEditor value={code} onChange={setCode} placeholder="Write your SQL query here..." />
             </div>
-            <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-border/50 shrink-0 flex-wrap">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono text-muted-foreground flex items-center gap-1.5">
-                  <TimerIcon className="h-3.5 w-3.5" />
-                  {timerDisplay}
-                </span>
-                <button
-                  type="button"
-                  onClick={timerRunning ? timerPause : timerStart}
-                  className="btn-space flex items-center gap-1 px-2 py-1.5 rounded text-xs font-medium"
-                  title={timerRunning ? "Pause" : "Start"}
-                >
-                  {timerRunning ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-                  {timerRunning ? "Pause" : "Start"}
-                </button>
-                <button
-                  type="button"
-                  onClick={timerReset}
-                  className="btn-space flex items-center gap-1 px-2 py-1.5 rounded text-xs font-medium"
-                  title="Reset"
-                >
-                  <ResetIcon className="h-3.5 w-3.5" />
-                  Reset
-                </button>
-              </div>
-              <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 px-4 py-3 border-t border-border/50 shrink-0">
               <button
+                onClick={handleRun}
                 disabled={isRunning || isEvaluating}
                 className="btn-space-primary relative flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold disabled:opacity-60 transition-all"
               >
@@ -246,18 +244,17 @@ export function RightPanel({ starterCode, questionId }: RightPanelProps) {
                 <Send className="h-4 w-4" />
                 {isEvaluating ? "Evaluating..." : "Evaluate"}
               </button>
-              </div>
             </div>
           </div>
         </ResizablePanel>
 
-        <ResizableHandle withHandle className="shrink-0 bg-border/50 hover:bg-cyan/20 transition-colors data-[panel-group-direction=vertical]:py-1" />
+        <ResizableHandle withHandle className="shrink-0 bg-border/50 hover:bg-[hsl(var(--primary)_/_0.2)] transition-colors data-[panel-group-direction=vertical]:py-1" />
 
         {/* Bottom: Console - resizable up/down */}
         <ResizablePanel defaultSize={35} minSize={15} order={2}>
           <div className="flex flex-col h-full border-t border-border/30">
             <div className="flex items-center gap-2 px-4 py-2 border-b border-border/30 bg-background/40 shrink-0">
-              <Terminal className="h-3.5 w-3.5 text-cyan" />
+              <Terminal className="h-3.5 w-3.5 text-theme" />
               <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Console Output</span>
             </div>
             <div ref={consoleRef} className="flex-1 overflow-y-auto scrollbar-thin p-4 bg-background/60 font-mono text-xs leading-5">
@@ -266,7 +263,7 @@ export function RightPanel({ starterCode, questionId }: RightPanelProps) {
                   key={i}
                   className={
                     line.startsWith(">") ? "text-cyan"
-                      : line.includes("✓") || line.includes("row(s)") ? "text-cyan"
+                      : line.includes("✓") || line.includes("row(s)") ? "text-theme"
                       : line.includes("✗") || line.includes("Error") ? "text-red-400"
                       : "text-muted-foreground"
                   }

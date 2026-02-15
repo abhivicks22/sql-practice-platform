@@ -16,12 +16,12 @@ interface HeaderProps {
 
 const difficultyColors: Record<string, { active: string; inactive: string }> = {
   All: {
-    active: "bg-cyan/15 text-cyan border-cyan/30 glow-border",
+    active: "bg-theme-subtle text-theme border-theme glow-border",
     inactive: "text-muted-foreground hover:text-foreground hover:bg-secondary/60 border-transparent",
   },
   Easy: {
-    active: "bg-cyan/15 text-cyan border-cyan/30",
-    inactive: "text-muted-foreground hover:text-cyan hover:bg-cyan/10 border-transparent",
+    active: "bg-theme-subtle text-theme border-theme",
+    inactive: "text-muted-foreground hover:text-theme hover:bg-theme-subtle border-transparent",
   },
   Medium: {
     active: "bg-orange-500/15 text-orange-400 border-orange-400/30",
@@ -64,14 +64,14 @@ export function Header({
   }, [])
 
   return (
-    <header className="glass-panel-strong px-6 py-3 flex flex-col gap-3 relative overflow-hidden">
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan/20 to-transparent" aria-hidden />
+    <header className="glass-panel-strong px-6 py-3 flex flex-col gap-3 relative">
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--primary)_/_0.2)] to-transparent" aria-hidden />
       {/* Top row: branding + theme */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <Database className="h-7 w-7 text-cyan" />
-            <div className="absolute -inset-1 bg-cyan/20 rounded-full blur-md -z-10" />
+            <Database className="h-7 w-7 text-theme" />
+            <div className="absolute -inset-1 bg-theme-subtle rounded-full blur-md -z-10" />
           </div>
           <h1 className="text-xl font-bold tracking-tight text-foreground glow-text">
             SQL Navigator
@@ -98,12 +98,12 @@ export function Header({
             onClick={() => setThemeOpen((o) => !o)}
             className="btn-space flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all"
           >
-            <Palette className="h-3.5 w-3.5 text-cyan" />
+            <Palette className="h-3.5 w-3.5 text-theme" />
             Theme
             <ChevronDown className={`h-3.5 w-3.5 transition-transform ${themeOpen ? "rotate-180" : ""}`} />
           </button>
           {themeOpen && (
-            <div className="absolute right-0 top-full mt-1 py-1 min-w-[160px] rounded-md border border-border/50 bg-background shadow-lg z-[100]">
+            <div className="absolute right-0 top-full mt-1 py-1 min-w-[160px] rounded-md border border-border/50 bg-card shadow-xl z-[9999]">
               {THEMES.map((t) => (
                 <button
                   key={t.id}
@@ -114,7 +114,7 @@ export function Header({
                   }}
                   className={`block w-full text-left px-3 py-2 text-xs font-medium transition-colors ${
                     theme === t.id
-                      ? "bg-cyan/15 text-cyan"
+                      ? "bg-theme-subtle text-theme"
                       : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
                   }`}
                 >
@@ -134,13 +134,13 @@ export function Header({
           <button
             type="button"
             onClick={() => setPatternOpen((o) => !o)}
-            className="btn-space flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all rounded-md bg-cyan/15 text-cyan border-cyan/30"
+            className="btn-space flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all rounded-md bg-theme-subtle text-theme border-theme"
           >
             {selectedCategory}
             <ChevronDown className={`h-3.5 w-3.5 transition-transform ${patternOpen ? "rotate-180" : ""}`} />
           </button>
           {patternOpen && (
-            <div className="absolute left-0 top-full mt-1 py-1 min-w-[140px] rounded-md border border-border/50 bg-background shadow-lg z-[100]">
+            <div className="absolute left-0 top-full mt-1 py-1 min-w-[140px] rounded-md border border-border/50 bg-card shadow-xl z-[9999]">
               {categories.map((cat) => (
                 <button
                   key={cat}
@@ -151,7 +151,7 @@ export function Header({
                   }}
                   className={`block w-full text-left px-3 py-2 text-xs font-medium transition-colors ${
                     selectedCategory === cat
-                      ? "bg-cyan/15 text-cyan"
+                      ? "bg-theme-subtle text-theme"
                       : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
                   }`}
                 >
@@ -168,14 +168,14 @@ export function Header({
             type="button"
             onClick={() => setDiffOpen((o) => !o)}
             className={`btn-space flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all rounded-md ${
-              difficultyColors[selectedDifficulty]?.active ?? "bg-cyan/15 text-cyan border-cyan/30"
+              difficultyColors[selectedDifficulty]?.active ?? "bg-theme-subtle text-theme border-theme"
             }`}
           >
             {selectedDifficulty}
             <ChevronDown className={`h-3.5 w-3.5 transition-transform ${diffOpen ? "rotate-180" : ""}`} />
           </button>
           {diffOpen && (
-            <div className="absolute right-0 top-full mt-1 py-1 min-w-[120px] rounded-md border border-border/50 bg-background shadow-lg z-[100]">
+            <div className="absolute right-0 top-full mt-1 py-1 min-w-[120px] rounded-md border border-border/50 bg-card shadow-xl z-[9999]">
               {difficulties.map((diff) => (
                 <button
                   key={diff}
@@ -186,7 +186,7 @@ export function Header({
                   }}
                   className={`block w-full text-left px-3 py-2 text-xs font-medium transition-colors ${
                     selectedDifficulty === diff
-                      ? difficultyColors[diff]?.active ?? "bg-cyan/15 text-cyan"
+                      ? difficultyColors[diff]?.active ?? "bg-theme-subtle text-theme"
                       : difficultyColors[diff]?.inactive ?? "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
                   }`}
                 >

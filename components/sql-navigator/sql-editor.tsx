@@ -106,13 +106,13 @@ export function SqlEditor({
                     key={j}
                     className={
                       t.type === "keyword"
-                        ? "text-cyan"
+                        ? "text-theme"
                         : t.type === "string"
                           ? "text-orange-400/90"
                           : t.type === "comment"
                             ? "text-muted-foreground/70"
                             : t.type === "number"
-                              ? "text-cyan/90"
+                              ? "text-theme"
                               : "text-foreground/90"
                     }
                   >

@@ -91,7 +91,7 @@ function AmbientBackground() {
       <div
         className="absolute inset-0 opacity-[0.06] animate-[slide-stripes_20s_linear_infinite]"
         style={{
-          backgroundImage: "repeating-linear-gradient(115deg, transparent 0px, transparent 2px, hsl(var(--cyan) / 0.35) 2px, hsl(var(--cyan) / 0.35) 4px)",
+          backgroundImage: "repeating-linear-gradient(115deg, transparent 0px, transparent 2px, hsl(var(--primary) / 0.35) 2px, hsl(var(--primary) / 0.35) 4px)",
           backgroundSize: "80px 80px",
         }}
       />
@@ -362,7 +362,7 @@ export default function SQLNavigatorPage() {
       <div className="h-screen flex flex-col sql-app" data-step="app">
         <AmbientBackground />
         <FloatingParticles />
-        <div className="shrink-0 p-2 pb-0">
+        <div className="relative z-50 shrink-0 p-2 pb-0">
           <Header
             selectedCategory={selectedCategory}
             onCategoryChange={handleCategoryChange}
@@ -391,7 +391,7 @@ export default function SQLNavigatorPage() {
       <FloatingParticles />
 
       {/* Header - z-10 so Pattern dropdown appears above main content */}
-      <div className="relative z-10 shrink-0 p-2 pb-0">
+      <div className="relative z-50 shrink-0 p-2 pb-0">
         <Header
           selectedCategory={selectedCategory}
           onCategoryChange={handleCategoryChange}
