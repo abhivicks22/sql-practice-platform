@@ -41,56 +41,64 @@
     --cyan-glow: 188 100% 50%;
   }
 
-  /* Theme: Universal - clean, precise, SpaceX-inspired base */
-  [data-theme="universal"] {
-    --background: 222 47% 4%;
-    --foreground: 210 30% 96%;
-    --card: 222 40% 6%;
-    --primary: 188 95% 48%;
-    --cyan: 188 95% 48%;
-    --cyan-glow: 188 100% 55%;
-    --border: 215 25% 14%;
-    --muted: 222 35% 11%;
-    --secondary: 222 38% 12%;
+  /* ═══════════════════════════════════════════════
+     Theme: Neon Pulse — Cyberpunk / Tron
+     Magenta + Electric Blue on deep black
+     ═══════════════════════════════════════════════ */
+  [data-theme="neon-pulse"] {
+    --background: 240 20% 4%;
+    --foreground: 220 20% 95%;
+    --card: 240 18% 7%;
+    --primary: 340 100% 60%;
+    --primary-foreground: 240 20% 4%;
+    --cyan: 190 100% 50%;
+    --cyan-glow: 190 100% 60%;
+    --border: 240 15% 14%;
+    --muted: 240 15% 10%;
+    --muted-foreground: 230 15% 52%;
+    --secondary: 240 18% 12%;
+    --ring: 340 100% 60%;
+    --destructive: 0 85% 55%;
   }
 
-  /* Theme: Black Hole - deep space, precise violet */
-  [data-theme="black-hole"] {
-    --background: 265 45% 3%;
-    --foreground: 260 15% 96%;
-    --card: 265 35% 5%;
-    --primary: 275 65% 58%;
-    --cyan: 275 65% 58%;
-    --cyan-glow: 280 70% 62%;
-    --border: 265 25% 12%;
-    --muted: 265 30% 8%;
-    --secondary: 265 35% 10%;
+  /* ═══════════════════════════════════════════════
+     Theme: Starship Console — SpaceX + Iron Man
+     Amber Gold + Cyan on space black
+     ═══════════════════════════════════════════════ */
+  [data-theme="starship"] {
+    --background: 220 30% 4%;
+    --foreground: 210 25% 95%;
+    --card: 220 25% 7%;
+    --primary: 38 95% 52%;
+    --primary-foreground: 220 30% 4%;
+    --cyan: 195 100% 50%;
+    --cyan-glow: 195 100% 58%;
+    --border: 220 20% 14%;
+    --muted: 220 20% 10%;
+    --muted-foreground: 215 18% 50%;
+    --secondary: 220 22% 12%;
+    --ring: 38 95% 52%;
+    --destructive: 0 80% 55%;
   }
 
-  /* Theme: Avatar Pandora - teal/cyan bioluminescent (no green) */
-  [data-theme="avatar-pandora"] {
-    --background: 188 45% 3%;
-    --foreground: 185 25% 96%;
-    --card: 188 40% 5%;
-    --primary: 187 75% 50%;
-    --cyan: 187 75% 50%;
-    --cyan-glow: 185 85% 55%;
-    --border: 190 30% 12%;
-    --muted: 188 38% 8%;
-    --secondary: 188 42% 10%;
-  }
-
-  /* Theme: Comet - coral/orange (no yellow) */
-  [data-theme="comet"] {
-    --background: 15 45% 3%;
-    --foreground: 20 25% 96%;
-    --card: 15 38% 5%;
-    --primary: 18 92% 55%;
-    --cyan: 18 92% 55%;
-    --cyan-glow: 22 98% 58%;
-    --border: 15 28% 12%;
-    --muted: 15 35% 8%;
-    --secondary: 15 38% 10%;
+  /* ═══════════════════════════════════════════════
+     Theme: Aurora Flow — Fluid / Organic
+     Emerald Green + Purple on deep navy
+     ═══════════════════════════════════════════════ */
+  [data-theme="aurora-flow"] {
+    --background: 225 40% 4%;
+    --foreground: 220 20% 96%;
+    --card: 225 35% 7%;
+    --primary: 160 85% 45%;
+    --primary-foreground: 225 40% 4%;
+    --cyan: 263 85% 65%;
+    --cyan-glow: 263 90% 70%;
+    --border: 225 25% 14%;
+    --muted: 225 25% 10%;
+    --muted-foreground: 220 15% 50%;
+    --secondary: 225 28% 12%;
+    --ring: 160 85% 45%;
+    --destructive: 0 82% 55%;
   }
 }
 
@@ -124,7 +132,7 @@
     box-shadow: 0 0 0 1px hsl(var(--primary) / 0.2), inset 0 0 0 1px hsl(var(--primary) / 0.05);
   }
 
-  /* Theme-based accent (replaces hardcoded cyan) */
+  /* Theme-based accent */
   .text-theme {
     color: hsl(var(--primary));
   }
@@ -148,7 +156,7 @@
     box-shadow: 0 0 0 1px hsl(var(--primary) / 0.3);
   }
 
-  /* Darker, space-like buttons (main app only) – use theme primary */
+  /* Space buttons */
   .sql-app .btn-space {
     @apply bg-black/40 text-foreground;
     border-color: hsl(var(--primary) / 0.2);
@@ -193,35 +201,110 @@
     line-height: 1.65;
   }
 
+  /* ─── Animated utilities ─── */
+
   .animate-float {
     animation: float 6s ease-in-out infinite;
   }
+
+  .hover-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px hsl(var(--primary) / 0.15);
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 3s ease-in-out infinite;
+  }
+
+  .animate-scan-line {
+    position: relative;
+    overflow: hidden;
+  }
+  .animate-scan-line::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.08), transparent);
+    animation: scan-line 2s ease-in-out infinite;
+  }
 }
+
+/* ═══════════════════════════════════════════════
+   Keyframe Animations
+   ═══════════════════════════════════════════════ */
 
 @keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes pulse-glow {
   0%, 100% {
-    transform: translateY(0px);
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.2);
   }
   50% {
-    transform: translateY(-6px);
+    box-shadow: 0 0 12px hsl(var(--primary) / 0.25), 0 0 0 1px hsl(var(--primary) / 0.35);
   }
 }
 
-@keyframes comet-streak {
-  0% {
-    background-position: 0% 50%;
-  }
-  100% {
-    background-position: 200% 50%;
-  }
+@keyframes scan-line {
+  0% { left: -100%; }
+  100% { left: 100%; }
 }
 
-/* Sliding pattern - diagonal stripes that move (theme-aligned, no green/yellow) */
-@keyframes slide-stripes {
-  0% {
-    background-position: 0 0;
-  }
-  100% {
-    background-position: 80px 0;
-  }
+/* Neon Pulse gradient animation */
+@keyframes neon-gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Starship star drift */
+@keyframes star-twinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+/* Aurora flow */
+@keyframes aurora-shift {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+@keyframes orb-float-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -20px) scale(1.1); }
+  66% { transform: translate(-15px, 15px) scale(0.95); }
+}
+
+@keyframes orb-float-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-25px, 20px) scale(1.05); }
+  66% { transform: translate(20px, -15px) scale(0.9); }
+}
+
+@keyframes orb-float-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(15px, 25px) scale(1.08); }
+  66% { transform: translate(-20px, -10px) scale(0.92); }
+}
+
+/* Result row stagger */
+@keyframes slide-in-row {
+  0% { opacity: 0; transform: translateX(-8px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+/* Success burst */
+@keyframes success-pulse {
+  0% { box-shadow: 0 0 0 0 hsl(160 85% 45% / 0.4); }
+  70% { box-shadow: 0 0 0 8px hsl(160 85% 45% / 0); }
+  100% { box-shadow: 0 0 0 0 hsl(160 85% 45% / 0); }
 }

@@ -3,10 +3,9 @@
 import { createContext, useContext, useEffect, useState } from "react"
 
 export const THEMES = [
-  { id: "universal", label: "Nebula" },
-  { id: "black-hole", label: "Void" },
-  { id: "avatar-pandora", label: "Aurora" },
-  { id: "comet", label: "Comet" },
+  { id: "neon-pulse", label: "Neon Pulse" },
+  { id: "starship", label: "Starship Console" },
+  { id: "aurora-flow", label: "Aurora Flow" },
 ] as const
 
 export type ThemeId = (typeof THEMES)[number]["id"]
@@ -16,10 +15,10 @@ const STORAGE_KEY = "sql-navigator-theme"
 const ThemeContext = createContext<{
   theme: ThemeId
   setTheme: (id: ThemeId) => void
-}>({ theme: "universal", setTheme: () => {} })
+}>({ theme: "neon-pulse", setTheme: () => { } })
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeId>("universal")
+  const [theme, setThemeState] = useState<ThemeId>("neon-pulse")
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {

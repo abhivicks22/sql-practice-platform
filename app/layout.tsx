@@ -36,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} ${sourceSans.variable}`} data-theme="universal">
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} ${sourceSans.variable}`} data-theme="neon-pulse">
       <body className="font-sans antialiased overflow-hidden">
         <ThemeProvider>{children}</ThemeProvider>
       </body>

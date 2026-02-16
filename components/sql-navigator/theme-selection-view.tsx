@@ -1,14 +1,27 @@
 "use client"
 
-import Image from "next/image"
 import { useTheme, THEMES, type ThemeId } from "@/contexts/theme-context"
-import { ArrowLeft, Check, Sparkles, Globe, Moon, Leaf, Flame } from "lucide-react"
+import { ArrowLeft, Check, Sparkles, Zap, Rocket, Waves } from "lucide-react"
 
-const THEME_PREVIEW: Record<ThemeId, { label: string; icon: React.ElementType }> = {
-  universal: { label: "Nebula – mission control", icon: Globe },
-  "black-hole": { label: "Void – deep space", icon: Moon },
-  "avatar-pandora": { label: "Aurora – teal glow", icon: Leaf },
-  comet: { label: "Comet – coral streak", icon: Flame },
+const THEME_PREVIEW: Record<ThemeId, { label: string; description: string; icon: React.ElementType; gradient: string }> = {
+  "neon-pulse": {
+    label: "Cyberpunk vibes",
+    description: "Glowing magenta and electric blue on deep black",
+    icon: Zap,
+    gradient: "from-pink-500/30 via-purple-600/20 to-cyan-400/30",
+  },
+  starship: {
+    label: "Mission control",
+    description: "Amber gold and cyan on space black with starfield",
+    icon: Rocket,
+    gradient: "from-amber-500/30 via-orange-600/20 to-cyan-400/30",
+  },
+  "aurora-flow": {
+    label: "Fluid elegance",
+    description: "Emerald green and purple with flowing aurora mesh",
+    icon: Waves,
+    gradient: "from-emerald-500/30 via-teal-600/20 to-purple-500/30",
+  },
 }
 
 export function ThemeSelectionView({
@@ -30,11 +43,11 @@ export function ThemeSelectionView({
           </h2>
         </div>
         <p className="text-muted-foreground text-sm mb-8 text-center max-w-sm">
-          Pick a theme. You can change it anytime in the app.
+          Pick a theme. You can change it anytime in the header.
         </p>
         <div className="w-24 h-px bg-gradient-to-r from-transparent via-border to-transparent mb-8" />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 w-full max-w-2xl">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 w-full max-w-3xl">
           {THEMES.map((t, i) => {
             const isSelected = theme === t.id
             const preview = THEME_PREVIEW[t.id]
@@ -45,33 +58,26 @@ export function ThemeSelectionView({
                 type="button"
                 onClick={() => setTheme(t.id)}
                 className={`
-                  relative flex flex-col items-stretch overflow-hidden rounded-2xl border-2 text-left transition-all duration-300 min-h-[140px]
+                  relative flex flex-col items-stretch overflow-hidden rounded-2xl border-2 text-left transition-all duration-300 min-h-[180px]
                   animate-in fade-in-0 slide-in-from-bottom-2
                   ${isSelected
                     ? "border-theme shadow-lg scale-[1.02] ring-2 ring-[hsl(var(--primary)_/_0.3)]"
                     : "border-border/50 hover:border-theme hover:scale-[1.01]"
                   }
                 `}
-                style={{ animationDelay: `${i * 60}ms`, animationFillMode: "backwards" }}
+                style={{ animationDelay: `${i * 80}ms`, animationFillMode: "backwards" }}
               >
-                {/* Your pic as card background */}
-                <div className="absolute inset-0">
-                  <Image
-                    src={`/pics/${t.id}.jpg`}
-                    alt=""
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 640px) 100vw, 50vw"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/60 to-background/30" />
-                  {isSelected && (
-                    <div className="absolute inset-0 bg-[hsl(var(--primary)_/_0.05)]" />
-                  )}
-                </div>
+                {/* Gradient preview background */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${preview.gradient}`} />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/60 to-background/30" />
+                {isSelected && (
+                  <div className="absolute inset-0 bg-[hsl(var(--primary)_/_0.05)]" />
+                )}
+
                 <div className="relative flex flex-col flex-1 p-5 justify-between">
                   <div className="flex items-center justify-between">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-background/60 backdrop-blur border border-border/50">
-                      <Icon className="h-4 w-4 text-theme" />
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-background/60 backdrop-blur border border-border/50">
+                      <Icon className="h-5 w-5 text-theme" />
                     </span>
                     {isSelected && (
                       <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-primary-foreground shrink-0">
@@ -79,9 +85,10 @@ export function ThemeSelectionView({
                       </span>
                     )}
                   </div>
-                  <div>
-                    <span className="block text-base font-semibold text-foreground">{t.label}</span>
-                    <span className="text-xs text-muted-foreground">{preview.label}</span>
+                  <div className="mt-4">
+                    <span className="block text-base font-bold text-foreground">{t.label}</span>
+                    <span className="text-xs text-muted-foreground mt-0.5 block">{preview.label}</span>
+                    <span className="text-[10px] text-muted-foreground/70 mt-1 block">{preview.description}</span>
                   </div>
                 </div>
               </button>
@@ -89,7 +96,7 @@ export function ThemeSelectionView({
           })}
         </div>
 
-        <div className="flex items-center gap-4 mt-10 w-full max-w-2xl">
+        <div className="flex items-center gap-4 mt-10 w-full max-w-3xl">
           <button
             type="button"
             onClick={onBack}
