@@ -27,11 +27,11 @@ export async function POST(request: Request) {
       ? schema
       : Array.isArray(schema)
         ? (schema as { name: string; columns: { name: string; type: string }[] }[])
-            .map(
-              (t: { name: string; columns: { name: string; type: string }[] }) =>
-                `Table ${t.name}: ${t.columns.map((c: { name: string; type: string }) => `${c.name} ${c.type}`).join(", ")}`
-            )
-            .join("\n")
+          .map(
+            (t: { name: string; columns: { name: string; type: string }[] }) =>
+              `Table ${t.name}: ${t.columns.map((c: { name: string; type: string }) => `${c.name} ${c.type}`).join(", ")}`
+          )
+          .join("\n")
         : ""
 
   const prompt = `You are a SQL and analytics expert. Given this practice question, respond with valid JSON only (no markdown, no code block), with exactly these keys:
@@ -45,34 +45,43 @@ Problem: ${problem}
 Schema:
 ${schemaText}`
 
-  try {
-    const genAI = new GoogleGenerativeAI(apiKey)
-    // Use a current model: gemini-2.0-flash (stable); fallback gemini-1.5-flash-latest if needed
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
-    const result = await model.generateContent(prompt)
-    const text = result.response.text()
-    if (!text) {
-      return NextResponse.json({ error: "Empty response from Gemini" }, { status: 502 })
+  const models = ["gemini-2.0-flash", "gemini-2.0-flash-lite"]
+
+  for (const modelName of models) {
+    try {
+      const genAI = new GoogleGenerativeAI(apiKey)
+      const model = genAI.getGenerativeModel({ model: modelName })
+      const result = await model.generateContent(prompt)
+      const text = result.response.text()
+      if (!text) {
+        return NextResponse.json({ error: "Empty response from Gemini" }, { status: 502 })
+      }
+      // Strip possible markdown code fence
+      const raw = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim()
+      const parsed = JSON.parse(raw) as {
+        businessImpact?: string
+        optimizationTips?: string[]
+        edgeCases?: string[]
+      }
+      const businessImpact = typeof parsed.businessImpact === "string" ? parsed.businessImpact : ""
+      const optimizationTips = Array.isArray(parsed.optimizationTips) ? parsed.optimizationTips : []
+      const edgeCases = Array.isArray(parsed.edgeCases)
+        ? parsed.edgeCases.map((text: string) => ({ text: String(text), checked: false }))
+        : []
+      return NextResponse.json({
+        businessImpact,
+        optimizationTips,
+        edgeCases,
+      })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Gemini request failed"
+      // If rate limited (429), try the next model
+      if (message.includes("429") && modelName !== models[models.length - 1]) {
+        continue
+      }
+      return NextResponse.json({ error: message }, { status: 502 })
     }
-    // Strip possible markdown code fence
-    const raw = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim()
-    const parsed = JSON.parse(raw) as {
-      businessImpact?: string
-      optimizationTips?: string[]
-      edgeCases?: string[]
-    }
-    const businessImpact = typeof parsed.businessImpact === "string" ? parsed.businessImpact : ""
-    const optimizationTips = Array.isArray(parsed.optimizationTips) ? parsed.optimizationTips : []
-    const edgeCases = Array.isArray(parsed.edgeCases)
-      ? parsed.edgeCases.map((text: string) => ({ text: String(text), checked: false }))
-      : []
-    return NextResponse.json({
-      businessImpact,
-      optimizationTips,
-      edgeCases,
-    })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Gemini request failed"
-    return NextResponse.json({ error: message }, { status: 502 })
   }
+
+  return NextResponse.json({ error: "All models rate limited. Please try again later." }, { status: 429 })
 }
