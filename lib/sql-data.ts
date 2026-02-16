@@ -83,6 +83,16 @@ CREATE TABLE product_reviews (
   product_id INT,
   review_text VARCHAR(40)
 );
+
+INSERT INTO product_reviews VALUES
+(1, 101, 'This product is excellent quality'),
+(2, 102, 'Not excellent but decent product'),
+(3, 103, 'Absolutely amazing experience'),
+(4, 104, 'The service was not amazing at all'),
+(5, 105, 'Really excellent value for money'),
+(6, 106, 'Average product nothing special'),
+(7, 107, 'AMAZING product highly recommend'),
+(8, 108, 'It was Excellent in every way');
 `,
     mySolution: `select  
 from product_reviews 
@@ -90,56 +100,25 @@ where (lower(review_text) like '% excellent%' or lower(review_text) like '% amaz
 and  lower(review_text) not like '%not excellent%'
 and lower(review_text) not like '%not amazing%'`,
     systemSolution: `SELECT review_id, product_id, review_text
-FROM product_reviews                                                                                   --    Table containing product reviews
-WHERE (LOWER(review_text) LIKE '% excellent%' OR LOWER(review_text) LIKE '% amazing%')                --    Include reviews containing 'excellent' or 'amazing' (case-insensitive)
-  AND LOWER(review_text) NOT LIKE '%not excellent%'                                                  --    Exclude reviews with 'not excellent'
-  AND LOWER(review_text) NOT LIKE '%not amazing%'                                                    --    Exclude reviews with 'not amazing'
-ORDER BY review_id ASC;                                                                                --    Order results by review_id ascending
-
-
-
-
-
-2 - Category Product Count
-You are provided with a table that lists various product categories, each containing a comma-separated list of products. Your task is to write a SQL query to count the number of products in each category. Sort the result by product count & category in ASC order
-
- 
-
-Tables: categories
-+-------------+-------------+
-| COLUMN_NAME | DATA_TYPE   |
-+-------------+-------------+
-| category    | varchar(50) |
-| products    | varchar(75) |
-+-------------+-------------+
-
-
-MY SOLUTION :
-
-
-
-select category,
-length(products)-length(replace(products,',',''))+1 as product_count
-from categories
-order by product_count,category
-
-
-SYSTEM SOLUTION :
-
-SELECT 
-        category,
-        LENGTH(products) - LENGTH(REPLACE(products, ',', '')) + 1 AS product_count   --    Count number of products by counting commas plus one
-    FROM 
-        categories
-ORDER BY product_count, category ;                                                          --    Order results by product count ascending`,
+FROM product_reviews
+WHERE (LOWER(review_text) LIKE '% excellent%' OR LOWER(review_text) LIKE '% amazing%')
+  AND LOWER(review_text) NOT LIKE '%not excellent%'
+  AND LOWER(review_text) NOT LIKE '%not amazing%'
+ORDER BY review_id ASC;`,
     starterCode: `-- Product Reviews\n-- Write your solution here\nSELECT *\nFROM product_reviews;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Sentiment analysis on product reviews helps identify top-performing products, detect quality issues early, and guide marketing strategies. Filtering out negated sentiments (like "not excellent") prevents false positives that could skew customer satisfaction metrics.`,
+    optimizationTips: [
+      "Create a full-text search index on review_text for faster LIKE pattern matching",
+      "Use LOWER() once with a subquery rather than multiple times per row",
+      "Consider PostgreSQL's ILIKE operator for case-insensitive matching without LOWER()",
+      "Index on review_id for efficient ORDER BY"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Review text starts with 'excellent' (no space before) — not matched by '% excellent%'",
+      "Mixed case like 'NOT Excellent' — LOWER() handles this correctly",
+      "Review containing both 'not excellent' and 'amazing' — should be excluded",
+      "Empty review_text or NULL values",
+      "Review with 'not amazing but excellent' — should be excluded due to 'not amazing'"
     ]
   },
 
@@ -157,23 +136,49 @@ Tables: Customers
 | CustomerID  | int         |
 | Email       | varchar(25) |
 +-------------+-------------+`,
-    schema: [],
-    sampleData: ``,
-    mySolution: `select email,
-SUBSTRING(Email, INSTR(Email, '@') +1) AS domain_name
-from customers;`,
-    systemSolution: `SELECT 
+    schema: [
+      {
+        name: "customers",
+        columns: [
+          { name: "CustomerID", type: "int" },
+          { name: "Email", type: "varchar(25)" }
+        ]
+      }
+    ],
+    sampleData: `DROP TABLE IF EXISTS customers;
+
+CREATE TABLE customers (
+  CustomerID INT,
+  Email VARCHAR(25)
+);
+
+INSERT INTO customers VALUES
+(1, 'alice@gmail.com'),
+(2, 'bob@yahoo.com'),
+(3, 'carol@outlook.com'),
+(4, 'dave@gmail.com'),
+(5, 'eve@company.org'),
+(6, 'frank@yahoo.com');
+`,
+    mySolution: `SELECT email,
+SUBSTRING(Email FROM POSITION('@' IN Email) + 1) AS domain_name
+FROM customers;`,
+    systemSolution: `SELECT
     Email,
-    SUBSTRING(Email, INSTR(Email, '@') + 1) AS domain_name
-FROM Customers;`,
+    SUBSTRING(Email FROM POSITION('@' IN Email) + 1) AS domain_name
+FROM customers;`,
     starterCode: `-- Domain Names\n-- Write your solution here\nSELECT 1;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Email domain analysis helps segment customers by email provider (Gmail, Yahoo, corporate domains), enabling targeted communication strategies, identifying B2B vs B2C customers, and detecting suspicious sign-up patterns from disposable email domains.`,
+    optimizationTips: [
+      "Use PostgreSQL's SPLIT_PART(Email, '@', 2) as a simpler alternative to SUBSTRING + POSITION",
+      "Create a computed/generated column for domain if queried frequently",
+      "Index the domain column for GROUP BY aggregations"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Email with multiple @ symbols — POSITION returns first occurrence",
+      "NULL or empty email values",
+      "Email with no domain part (malformed data)",
+      "Case sensitivity: 'Gmail.com' vs 'gmail.com'"
     ]
   },
 
@@ -205,6 +210,7 @@ Write an SQL query to calculate the total sales value for each product, consider
       }
     ],
     sampleData: `DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS orders;
 
 CREATE TABLE products (
   product_id INT,
@@ -212,45 +218,56 @@ CREATE TABLE products (
   price_date DATE
 );
 
-DROP TABLE IF EXISTS orders;
-
 CREATE TABLE orders (
   order_id INT,
   order_date DATE,
   product_id INT
 );
+
+INSERT INTO products VALUES
+(1, 100, '2024-01-01'),
+(1, 120, '2024-03-01'),
+(1, 110, '2024-06-01'),
+(2, 50, '2024-01-01'),
+(2, 60, '2024-04-01');
+
+INSERT INTO orders VALUES
+(1, '2024-01-15', 1),
+(2, '2024-02-20', 1),
+(3, '2024-03-15', 1),
+(4, '2024-04-10', 1),
+(5, '2024-06-05', 1),
+(6, '2024-01-10', 2),
+(7, '2024-03-20', 2),
+(8, '2024-04-05', 2);
 `,
-    mySolution: `with cte as(select ,
-sum(salary) over(partition by department ) -salary as total_sal
-from employee)
-,cte1 as (SELECT department,emp_id,salary,
-total_sal/(count(emp_id) over(partition by department)-1) as avg
-FROM cte
-)
-Select emp_id,salary,department
-from cte1
-where salary > avg
-order by emp_id`,
+    mySolution: null,
     systemSolution: `WITH price_range AS (
-    SELECT ,
-           DATE_ADD(LEAD(price_date, 1, '9999-12-31') OVER (PARTITION BY product_id ORDER BY price_date), INTERVAL -1 DAY) AS price_end_date  --    Calculate price end date as one day before next price_date
-    FROM products                                                                                                                        --    Products table containing price history
+    SELECT *,
+           COALESCE(LEAD(price_date) OVER (PARTITION BY product_id ORDER BY price_date) - INTERVAL '1 day', '9999-12-31') AS price_end_date
+    FROM products
 )
-SELECT p.product_id, 
-       SUM(p.price) AS total_sales                                                                                                      --    Sum total price for orders within valid price period
+SELECT p.product_id,
+       SUM(p.price) AS total_sales
 FROM orders o
-INNER JOIN price_range p ON o.product_id = p.product_id                                                                                  --    Join orders with price ranges on product_id
-    AND o.order_date BETWEEN p.price_date AND p.price_end_date                                                                          --    Filter orders within price validity period
-GROUP BY p.product_id                                                                                                                    --    Group by product_id to aggregate sales
-ORDER BY p.product_id ASC;                                                                                                               --    Order results by product_id ascending`,
+INNER JOIN price_range p ON o.product_id = p.product_id
+    AND o.order_date BETWEEN p.price_date AND p.price_end_date
+GROUP BY p.product_id
+ORDER BY p.product_id ASC;`,
     starterCode: `-- Dynamic Pricing\n-- Write your solution here\nSELECT *\nFROM products;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Dynamic pricing analysis helps e-commerce platforms optimize revenue by tracking how price changes affect order volume. Understanding total sales at time-of-purchase prices enables accurate revenue recognition and helps pricing teams measure the ROI of price adjustments.`,
+    optimizationTips: [
+      "Index products on (product_id, price_date) for efficient LEAD window function",
+      "Use BETWEEN with computed date ranges instead of correlated subqueries",
+      "Consider materialized views for price range lookups in high-volume systems",
+      "COALESCE with far-future date handles the last price period elegantly"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Product with only one price entry — no LEAD value, needs default end date",
+      "Order on exact price_date boundary — should use the new price",
+      "Multiple price changes on the same day for a product",
+      "Order date before any price was set for that product",
+      "Product with no orders at all"
     ]
   },
 
@@ -278,10 +295,20 @@ CREATE TABLE employee (
   salary INT,
   department VARCHAR(15)
 );
+
+INSERT INTO employee VALUES
+(1, 80000, 'Engineering'),
+(2, 90000, 'Engineering'),
+(3, 60000, 'Engineering'),
+(4, 70000, 'Marketing'),
+(5, 50000, 'Marketing'),
+(6, 95000, 'Sales'),
+(7, 45000, 'Sales'),
+(8, 75000, 'Sales');
 `,
-    mySolution: `with cte as(select ,
-sum(salary) over(partition by department ) -salary as total_sal
-from employee)
+    mySolution: `WITH cte AS (SELECT *,
+SUM(salary) OVER(PARTITION BY department) - salary AS total_sal
+FROM employee)
 ,cte1 as (SELECT department,emp_id,salary,
 total_sal/(count(emp_id) over(partition by department)-1) as avg
 FROM cte
@@ -290,7 +317,7 @@ Select emp_id,salary,department
 from cte1
 where salary > avg
 order by emp_id`,
-    systemSolution: `select  from 
+    systemSolution: `SELECT * FROM
 employee e1
 where salary > (select avg(e2.salary) 
 from employee e2 
@@ -298,13 +325,18 @@ where e1.department != e2.department
 )
 ORDER BY emp_id ;`,
     starterCode: `-- Highly Paid Employees\n-- Write your solution here\nSELECT *\nFROM employee;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Identifying employees earning above the cross-department average helps HR detect salary inequities, justify compensation adjustments, and ensure competitive pay across departments without bias from within-department grouping.`,
+    optimizationTips: [
+      "Correlated subquery recalculates for each row — consider CTE with pre-computed averages per department exclusion",
+      "Index on department column speeds up the exclusion filter in the subquery",
+      "Window functions (SUM/COUNT with partition exclusion) can replace the correlated subquery"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Department with only one employee — excluding it changes the average significantly",
+      "Employee in a department of one — their entire department is excluded from the average",
+      "All employees in the same department — no other departments to average",
+      "NULL salary values",
+      "Tied salary exactly equal to the average — should not be included (strictly greater)"
     ]
   },
 
@@ -336,6 +368,7 @@ Write an SQL to derive excess/insufficient Inventory volume and value in cost fo
       }
     ],
     sampleData: `DROP TABLE IF EXISTS inventory;
+DROP TABLE IF EXISTS products;
 
 CREATE TABLE inventory (
   inventory_level INT,
@@ -344,12 +377,23 @@ CREATE TABLE inventory (
   product_id INT
 );
 
-DROP TABLE IF EXISTS products;
-
 CREATE TABLE products (
   product_id INT,
   unit_cost DECIMAL(5,2)
 );
+
+INSERT INTO inventory VALUES
+(100, 80, 1, 101),
+(50, 70, 1, 102),
+(200, 150, 2, 101),
+(90, 100, 2, 103),
+(60, 60, 3, 102),
+(120, 100, 3, 103);
+
+INSERT INTO products VALUES
+(101, 25.00),
+(102, 15.50),
+(103, 40.00);
 `,
     mySolution: `with cte as(select i.location_id,
 sum(inventory_level-inventory_target) as  excess_qty,
@@ -367,30 +411,36 @@ select 'Overall' as location_id
 , sum(excess_value) as excess_insufficient_value
 from cte
 ORDER BY location_id;`,
-    systemSolution: `with cte as (
-select i.location_id as location_id
-,sum(inventory_level-inventory_target) as excess_insufficient_qty
-,sum((inventory_level-inventory_target)p.unit_cost) as excess_insufficient_value 
-from inventory i 
-inner join products p on i.product_id=p.product_id
-group by i.location_id)
-
-select CAST(location_id as CHAR) as location_id , excess_insufficient_qty,excess_insufficient_value
-from cte
-union all
-select 'Overall' as location_id 
-, sum(excess_insufficient_qty) as excess_insufficient_qty
-, sum(excess_insufficient_value) as excess_insufficient_value
-from cte
+    systemSolution: `WITH cte AS (
+SELECT i.location_id AS location_id,
+  SUM(inventory_level - inventory_target) AS excess_insufficient_qty,
+  SUM((inventory_level - inventory_target) * p.unit_cost) AS excess_insufficient_value
+FROM inventory i
+INNER JOIN products p ON i.product_id = p.product_id
+GROUP BY i.location_id
+)
+SELECT CAST(location_id AS VARCHAR) AS location_id, excess_insufficient_qty, excess_insufficient_value
+FROM cte
+UNION ALL
+SELECT 'Overall' AS location_id,
+  SUM(excess_insufficient_qty) AS excess_insufficient_qty,
+  SUM(excess_insufficient_value) AS excess_insufficient_value
+FROM cte
 ORDER BY location_id;`,
     starterCode: `-- Excess/insufficient Inventory\n-- Write your solution here\nSELECT *\nFROM inventory;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Inventory excess/shortage analysis at warehouse level directly impacts working capital management, storage costs, and fulfillment rates. Identifying overstocked locations enables redistribution, while understocked locations signal urgent replenishment needs.`,
+    optimizationTips: [
+      "Pre-aggregate inventory differences before joining with products for better performance",
+      "Use GROUPING SETS or ROLLUP instead of UNION ALL for the overall row",
+      "Index on product_id in both tables for efficient JOIN",
+      "CAST to VARCHAR for UNION compatibility between INT and string 'Overall'"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Inventory exactly at target (zero difference) — neither excess nor insufficient",
+      "Location with only one product",
+      "Product in inventory but not in products table (missing unit_cost)",
+      "Negative inventory levels (data quality issue)",
+      "UNION ALL ordering: 'Overall' sorts alphabetically vs numeric location_ids"
     ]
   },
 
@@ -402,36 +452,74 @@ ORDER BY location_id;`,
     points: 25,
     problem: `Zomato is planning to offer a premium membership to customers who have placed multiple orders in a single day.
 Your task is to write a SQL to find those customers who have placed multiple orders in a single day at least once , total order value generate by those customers and order value generated only by those orders, display the results in ascending order of total order value.`,
-    schema: [],
-    sampleData: ``,
-    mySolution: `select customer_name, CAST(order_date as DATE),
-count() as no_of_order
-from orders
-group by customer_name, CAST(order_date as DATE)
-having count()  >1`,
-    systemSolution: `with cte as (
-select customer_name,CAST(order_date as DATE) as order_day
-,count() as no_of_orders
- from orders 
-group by customer_name,CAST(order_date as DATE) 
-having count()>1
+    schema: [
+      {
+        name: "orders",
+        columns: [
+          { name: "order_id", type: "int" },
+          { name: "customer_name", type: "varchar(20)" },
+          { name: "order_date", type: "timestamp" },
+          { name: "order_value", type: "int" }
+        ]
+      }
+    ],
+    sampleData: `DROP TABLE IF EXISTS orders;
+
+CREATE TABLE orders (
+  order_id INT,
+  customer_name VARCHAR(20),
+  order_date TIMESTAMP,
+  order_value INT
+);
+
+INSERT INTO orders VALUES
+(1, 'Alice', '2024-01-15 10:00:00', 500),
+(2, 'Alice', '2024-01-15 14:00:00', 300),
+(3, 'Alice', '2024-01-20 11:00:00', 450),
+(4, 'Bob', '2024-01-15 09:00:00', 600),
+(5, 'Bob', '2024-01-15 18:00:00', 200),
+(6, 'Bob', '2024-01-16 10:00:00', 350),
+(7, 'Carol', '2024-01-17 12:00:00', 700),
+(8, 'Carol', '2024-01-18 15:00:00', 400),
+(9, 'Dave', '2024-01-19 10:00:00', 250),
+(10, 'Dave', '2024-01-19 16:00:00', 150),
+(11, 'Dave', '2024-01-19 20:00:00', 100);
+`,
+    mySolution: `SELECT customer_name, CAST(order_date AS DATE),
+COUNT(*) AS no_of_order
+FROM orders
+GROUP BY customer_name, CAST(order_date AS DATE)
+HAVING COUNT(*) > 1`,
+    systemSolution: `WITH cte AS (
+SELECT customer_name, CAST(order_date AS DATE) AS order_day,
+  COUNT(*) AS no_of_orders
+FROM orders
+GROUP BY customer_name, CAST(order_date AS DATE)
+HAVING COUNT(*) > 1
 )
-select orders.customer_name,sum(orders.order_value) as total_order_value
-,sum(case when cte.customer_name is not null then orders.order_value end) as order_value
-from orders
-left join cte on orders.customer_name=cte.customer_name and 
-CAST(orders.order_date as DATE) =cte.order_day
-where orders.customer_name in (select distinct customer_name from cte)
-group by orders.customer_name
+SELECT orders.customer_name,
+  SUM(orders.order_value) AS total_order_value,
+  SUM(CASE WHEN cte.customer_name IS NOT NULL THEN orders.order_value END) AS order_value
+FROM orders
+LEFT JOIN cte ON orders.customer_name = cte.customer_name
+  AND CAST(orders.order_date AS DATE) = cte.order_day
+WHERE orders.customer_name IN (SELECT DISTINCT customer_name FROM cte)
+GROUP BY orders.customer_name
 ORDER BY total_order_value;`,
-    starterCode: `-- Zomato Membership\n-- Write your solution here\nSELECT 1;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    starterCode: `-- Zomato Membership\n-- Write your solution here\nSELECT *\nFROM orders;`,
+    businessImpact: `Identifying high-frequency ordering customers helps food delivery platforms target premium membership offers effectively. Understanding same-day multi-order behavior reveals power users who drive disproportionate revenue and are ideal candidates for loyalty programs.`,
+    optimizationTips: [
+      "Index on (customer_name, order_date) for efficient GROUP BY",
+      "CAST to DATE strips time component for day-level grouping",
+      "Use EXISTS instead of IN for the subquery filter for better performance with large datasets",
+      "Consider using FILTER clause instead of CASE WHEN for conditional aggregation in PostgreSQL"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Customer with orders spanning midnight \u2014 same calendar day vs different",
+      "Customer with exactly one order per day \u2014 never qualifies for membership",
+      "Customer with 3+ orders on one day but only 1 on others",
+      "NULL order_value \u2014 affects SUM calculations",
+      "Same customer_name, different customers (name collision)"
     ]
   },
 
@@ -461,37 +549,55 @@ Write a SQL to find the number of employees inside the Office at “2019-04-01 1
 CREATE TABLE employee_record (
   emp_id INT,
   action VARCHAR(3),
-  created_at DATETIME
+  created_at TIMESTAMP
 );
+
+INSERT INTO employee_record VALUES
+(1, 'in', '2019-04-01 08:00:00'),
+(1, 'out', '2019-04-01 17:00:00'),
+(2, 'in', '2019-04-01 09:00:00'),
+(2, 'out', '2019-04-01 18:30:00'),
+(3, 'in', '2019-04-01 10:00:00'),
+(3, 'out', '2019-04-01 15:00:00'),
+(3, 'in', '2019-04-01 16:00:00'),
+(3, 'out', '2019-04-01 20:00:00'),
+(4, 'in', '2019-03-31 22:00:00'),
+(4, 'out', '2019-04-01 06:00:00'),
+(5, 'in', '2019-04-01 18:00:00'),
+(5, 'out', '2019-04-01 23:00:00');
 `,
     mySolution: `WITH LatestStatus AS (
-    SELECT 
-        emp_id,
-        action,created_at,
-        ROW_NUMBER() OVER(PARTITION BY emp_id ORDER BY created_at DESC) as rn
+    SELECT emp_id, action, created_at,
+        ROW_NUMBER() OVER(PARTITION BY emp_id ORDER BY created_at DESC) AS rn
     FROM employee_record
     WHERE created_at <= '2019-04-01 19:05:00'
 )
-SELECT count() as no_of_emp_inside
+SELECT COUNT(*) AS no_of_emp_inside
 FROM LatestStatus
-where rn=1
-and action='in'`,
-    systemSolution: `with cte as (
-select 
-, lead(created_at) over(partition by emp_id order by created_at) as next_created_at
- from employee_record )
- select count() as no_of_emp_inside
- from cte
- where action='in'
- and '2019-04-01 19:05:00' between created_at and next_created_at;`,
+WHERE rn = 1 AND action = 'in'`,
+    systemSolution: `WITH cte AS (
+SELECT *,
+  LEAD(created_at) OVER(PARTITION BY emp_id ORDER BY created_at) AS next_created_at
+FROM employee_record
+)
+SELECT COUNT(*) AS no_of_emp_inside
+FROM cte
+WHERE action = 'in'
+  AND '2019-04-01 19:05:00' BETWEEN created_at AND next_created_at;`,
     starterCode: `-- Employees Inside Office (Part 1)\n-- Write your solution here\nSELECT *\nFROM employee_record;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Real-time office occupancy tracking helps facility management optimize HVAC/lighting, ensure fire safety compliance with headcount limits, and provide data for hybrid work policies by understanding peak office usage times.`,
+    optimizationTips: [
+      "LEAD window function pairs each 'in' with its next 'out' efficiently",
+      "Index on (emp_id, created_at) for optimal PARTITION BY + ORDER BY",
+      "ROW_NUMBER approach filters early with WHERE, reducing window computation",
+      "BETWEEN is inclusive \u2014 use >= and < for precise timestamp boundaries"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Employee who checked in but hasn't checked out yet (NULL next_created_at)",
+      "Employee working across midnight \u2014 in on March 31, out on April 1",
+      "Employee with multiple in/out cycles on the same day",
+      "Query timestamp exactly matches an in or out event",
+      "Employee who checked in exactly at the query timestamp"
     ]
   },
 
@@ -524,7 +630,8 @@ If a product category did not have any products that received at least one 4-sta
         ]
       }
     ],
-    sampleData: `DROP TABLE IF EXISTS products;
+    sampleData: `DROP TABLE IF EXISTS purchases;
+DROP TABLE IF EXISTS products;
 
 CREATE TABLE products (
   category VARCHAR(10),
@@ -533,30 +640,54 @@ CREATE TABLE products (
   price INT
 );
 
-DROP TABLE IF EXISTS purchases;
-
 CREATE TABLE purchases (
   id INT,
   product_id INT,
   stars INT
 );
+
+INSERT INTO products VALUES
+('Electronics', 1, 'Laptop', 1200),
+('Electronics', 2, 'Phone', 800),
+('Electronics', 3, 'Tablet', 500),
+('Clothing', 4, 'Jacket', 150),
+('Clothing', 5, 'Shirt', 50),
+('Books', 6, 'Novel', 20),
+('Books', 7, 'Textbook', 80);
+
+INSERT INTO purchases VALUES
+(1, 1, 5),
+(2, 1, 4),
+(3, 2, 3),
+(4, 2, 2),
+(5, 4, 4),
+(6, 5, 5),
+(7, 6, 3),
+(8, 6, 2),
+(9, 3, 4);
 `,
     mySolution: null,
-    systemSolution: `SELECT 
+    systemSolution: `SELECT
     category,
-    COALESCE(MIN(CASE WHEN pur.product_id IS NOT NULL THEN price END), 0) AS price          --    Minimum price of products purchased with 4 or 5 stars, default 0 if none
-FROM products p                                                                            --    Products table alias 'p'
-LEFT JOIN purchases pur ON p.id = pur.product_id AND pur.stars IN (4, 5)                   --    Left join purchases with 4 or 5 star ratings
-GROUP BY category                                                                         --    Group results by product category
-ORDER BY category;                                                                        --    Order results by category ascending`,
+    COALESCE(MIN(CASE WHEN pur.product_id IS NOT NULL THEN price END), 0) AS price
+FROM products p
+LEFT JOIN purchases pur ON p.id = pur.product_id AND pur.stars IN (4, 5)
+GROUP BY category
+ORDER BY category;`,
     starterCode: `-- Lowest Price\n-- Write your solution here\nSELECT *\nFROM products;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Finding the cheapest well-rated product per category helps e-commerce platforms highlight "best value" items, guide pricing strategy, and identify entry-level products that drive customer acquisition into each category.`,
+    optimizationTips: [
+      "LEFT JOIN ensures categories with no 4+ star products still appear (as 0)",
+      "COALESCE with 0 handles NULL from MIN when no qualifying products exist",
+      "Index on (product_id, stars) in purchases for efficient filtered joins",
+      "CASE WHEN inside MIN avoids counting non-qualifying rows"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Category with no purchases at all \u2014 should show price 0",
+      "Category where all products have only 1-3 star ratings \u2014 price should be 0",
+      "Product with both high and low star ratings \u2014 still qualifies",
+      "Multiple products with same lowest price in a category",
+      "Product with no purchases (never bought)"
     ]
   },
 
@@ -585,32 +716,52 @@ CREATE TABLE expenditures (
   expenditure INT,
   card_company VARCHAR(15)
 );
+
+INSERT INTO expenditures VALUES
+('Alice', 5000, 'Mastercard'),
+('Alice', 3000, 'Visa'),
+('Alice', 4000, 'Amex'),
+('Bob', 2000, 'Mastercard'),
+('Bob', 1000, 'Visa'),
+('Carol', 3000, 'Mastercard'),
+('Carol', 2000, 'Visa'),
+('Carol', 1500, 'Amex'),
+('Dave', 1000, 'Visa'),
+('Dave', 2000, 'Amex'),
+('Eve', 4000, 'Mastercard'),
+('Eve', 5000, 'Visa');
 `,
     mySolution: null,
-    systemSolution: `with mastercard as (
-select user_name,sum(expenditure) as expenditure
-from expenditures 
-where card_company='Mastercard'
-group by user_name
+    systemSolution: `WITH mastercard AS (
+SELECT user_name, SUM(expenditure) AS expenditure
+FROM expenditures
+WHERE card_company = 'Mastercard'
+GROUP BY user_name
+),
+non_mastercard AS (
+SELECT user_name, SUM(expenditure) AS expenditure
+FROM expenditures
+WHERE card_company != 'Mastercard'
+GROUP BY user_name
 )
-, non_mastercard as (
-select user_name,sum(expenditure) as expenditure
-from expenditures 
-where card_company!='Mastercard'
-group by user_name
-)
-select m.user_name, m.expenditure as mastercard_expense,nm.expenditure as other_expense
-from mastercard m 
-inner join non_mastercard nm on m.user_name=nm.user_name
-where nm.expenditure > m.expenditure;`,
+SELECT m.user_name, m.expenditure AS mastercard_expense, nm.expenditure AS other_expense
+FROM mastercard m
+INNER JOIN non_mastercard nm ON m.user_name = nm.user_name
+WHERE nm.expenditure > m.expenditure;`,
     starterCode: `-- Expenses Excluding MasterCard\n-- Write your solution here\nSELECT *\nFROM expenditures;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Cross-card spending analysis helps credit card companies identify customers whose non-Mastercard spending exceeds their Mastercard usage, enabling targeted offers and incentives to capture more wallet share from competing card issuers.`,
+    optimizationTips: [
+      "Two separate CTEs are cleaner than conditional aggregation for this comparison",
+      "INNER JOIN naturally excludes users without both card types",
+      "Index on (card_company, user_name) for efficient filtered grouping",
+      "Consider using FILTER clause: SUM(expenditure) FILTER (WHERE card_company = 'Mastercard')"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "User with Mastercard only and no other cards \u2014 excluded by INNER JOIN",
+      "User with other cards but no Mastercard \u2014 excluded from Mastercard CTE",
+      "User with equal Mastercard and other card expenses \u2014 not included (strictly greater)",
+      "User with multiple transactions on same card company",
+      "NULL expenditure values"
     ]
   },
 
@@ -643,35 +794,57 @@ CREATE TABLE orders (
   product_id INT,
   sales INT
 );
+
+INSERT INTO orders VALUES
+(1, 1, '2022-01-10', 1, 100),
+(2, 2, '2022-01-15', 1, 150),
+(3, 1, '2023-01-12', 1, 300),
+(4, 3, '2024-01-08', 1, 500),
+(5, 1, '2022-03-05', 1, 200),
+(6, 2, '2023-03-10', 1, 250),
+(7, 3, '2024-03-15', 1, 200),
+(8, 1, '2022-01-20', 2, 400),
+(9, 2, '2023-01-25', 2, 450),
+(10, 3, '2024-01-30', 2, 500),
+(11, 1, '2022-06-10', 2, 300),
+(12, 2, '2023-06-15', 2, 350),
+(13, 3, '2024-06-20', 2, 400);
 `,
     mySolution: null,
-    systemSolution: `with cte as (
-select product_id, MONTH(order_date) AS order_month
-,YEAR(order_date) AS order_year
-,SUM(sales) AS sales
-from orders
-group by product_id,MONTH(order_date) ,YEAR(order_date)
+    systemSolution: `WITH cte AS (
+SELECT product_id,
+  EXTRACT(MONTH FROM order_date) AS order_month,
+  EXTRACT(YEAR FROM order_date) AS order_year,
+  SUM(sales) AS sales
+FROM orders
+GROUP BY product_id, EXTRACT(MONTH FROM order_date), EXTRACT(YEAR FROM order_date)
+),
+cte2 AS (
+SELECT product_id, order_month,
+  SUM(CASE WHEN order_year = 2022 THEN sales ELSE 0 END) AS sales_2022,
+  SUM(CASE WHEN order_year = 2023 THEN sales ELSE 0 END) AS sales_2023,
+  SUM(CASE WHEN order_year = 2024 THEN sales ELSE 0 END) AS sales_2024
+FROM cte
+GROUP BY product_id, order_month
 )
-,cte2 as (
-select product_id,order_month
-, sum(case when order_year='2022' then sales else 0 end) as sales_2022 
-, sum(case when order_year='2023' then sales else 0 end) as sales_2023
-, sum(case when order_year='2024' then sales else 0 end) as sales_2024
-from cte
-group by product_id,order_month
-)
-select  
-from cte2
-where sales_2024>sales_2023 and sales_2023>sales_2022
+SELECT *
+FROM cte2
+WHERE sales_2024 > sales_2023 AND sales_2023 > sales_2022
 ORDER BY product_id;`,
     starterCode: `-- 2022 vs 2023 vs 2024 Sales\n-- Write your solution here\nSELECT *\nFROM orders;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Year-over-year sales growth analysis at the month level identifies consistently growing product-month combinations, helping demand planning teams forecast inventory needs, allocate marketing budgets to high-momentum products, and detect seasonal growth patterns.`,
+    optimizationTips: [
+      "Use EXTRACT(MONTH FROM ...) and EXTRACT(YEAR FROM ...) in PostgreSQL instead of MySQL's MONTH()/YEAR()",
+      "Index on (product_id, order_date) for efficient grouping",
+      "Pivot with CASE WHEN is more efficient than three separate subqueries",
+      "Consider using FILTER clause for cleaner conditional aggregation"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Product with no sales in one of the three years \u2014 sales = 0, breaks 'consistently increased'",
+      "Product sold only in 2024 \u2014 0 < 0 fails the condition",
+      "Multiple orders on same date for same product \u2014 correctly summed",
+      "Sales exactly equal between two years \u2014 strictly greater required",
+      "Product with sales in only some months"
     ]
   },
 
@@ -704,6 +877,7 @@ Order the result by room id, booking date. You may use calendar dim table which 
       }
     ],
     sampleData: `DROP TABLE IF EXISTS bookings;
+DROP TABLE IF EXISTS calendar_dim;
 
 CREATE TABLE bookings (
   room_id INT,
@@ -712,43 +886,64 @@ CREATE TABLE bookings (
   check_out_date DATE
 );
 
-DROP TABLE IF EXISTS calendar_dim;
-
 CREATE TABLE calendar_dim (
   cal_date DATE
 );
+
+INSERT INTO bookings VALUES
+(101, 1, '2024-04-01', '2024-04-05'),
+(101, 2, '2024-04-03', '2024-04-07'),
+(101, 3, '2024-04-06', '2024-04-10'),
+(102, 4, '2024-04-01', '2024-04-04'),
+(102, 5, '2024-04-04', '2024-04-08'),
+(103, 6, '2024-04-02', '2024-04-06'),
+(103, 7, '2024-04-03', '2024-04-05');
+
+INSERT INTO calendar_dim VALUES
+('2024-04-01'), ('2024-04-02'), ('2024-04-03'), ('2024-04-04'), ('2024-04-05'),
+('2024-04-06'), ('2024-04-07'), ('2024-04-08'), ('2024-04-09'), ('2024-04-10'),
+('2024-04-11'), ('2024-04-12'), ('2024-04-13'), ('2024-04-14'), ('2024-04-15'),
+('2024-04-16'), ('2024-04-17'), ('2024-04-18'), ('2024-04-19'), ('2024-04-20'),
+('2024-04-21'), ('2024-04-22'), ('2024-04-23'), ('2024-04-24'), ('2024-04-25'),
+('2024-04-26'), ('2024-04-27'), ('2024-04-28'), ('2024-04-29'), ('2024-04-30');
 `,
-    mySolution: `with cte as(select b.room_id,b.customer_id,c.cal_date
-from bookings b
-inner join  calendar_dim c
-on c.cal_date>=b.check_in_date
- and c.cal_date< b.check_out_date
-where check_in_date is not null
-and check_out_date is not null )
- select room_id,cal_date
-,group_concat(customer_id order by customer_id ) as customers
-from cte
-group by room_id,cal_date
-having COUNT(DISTINCT customer_id)>1
-order by room_id,cal_date`,
-    systemSolution: `with cte as (
-select room_id,customer_id,c.cal_date as book_date
-from bookings b
-inner join calendar_dim c on c.cal_date >= b.check_in_date and c.cal_date < b.check_out_date
+    mySolution: `WITH cte AS (
+SELECT b.room_id, b.customer_id, c.cal_date
+FROM bookings b
+INNER JOIN calendar_dim c ON c.cal_date >= b.check_in_date AND c.cal_date < b.check_out_date
+WHERE check_in_date IS NOT NULL AND check_out_date IS NOT NULL
 )
-select room_id,book_date , group_concat(customer_id ORDER BY customer_id)  as customers
-from cte 
-group by room_id,book_date 
-having count()>1
-order by room_id,book_date ;`,
+SELECT room_id, cal_date,
+  STRING_AGG(CAST(customer_id AS VARCHAR), ',' ORDER BY customer_id) AS customers
+FROM cte
+GROUP BY room_id, cal_date
+HAVING COUNT(DISTINCT customer_id) > 1
+ORDER BY room_id, cal_date`,
+    systemSolution: `WITH cte AS (
+SELECT room_id, customer_id, c.cal_date AS book_date
+FROM bookings b
+INNER JOIN calendar_dim c ON c.cal_date >= b.check_in_date AND c.cal_date < b.check_out_date
+)
+SELECT room_id, book_date,
+  STRING_AGG(CAST(customer_id AS VARCHAR), ',' ORDER BY customer_id) AS customers
+FROM cte
+GROUP BY room_id, book_date
+HAVING COUNT(*) > 1
+ORDER BY room_id, book_date;`,
     starterCode: `-- Hotel Booking Mistake\n-- Write your solution here\nSELECT *\nFROM bookings;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Overbooking detection prevents customer dissatisfaction, avoids costly compensation, and maintains hotel reputation. Identifying exact overlapping dates and affected customers enables proactive rebooking and targeted communication for service recovery.`,
+    optimizationTips: [
+      "Calendar dimension table enables date expansion without generating series",
+      "Use STRING_AGG (PostgreSQL) instead of GROUP_CONCAT (MySQL) for aggregating customer IDs",
+      "Index on bookings (room_id, check_in_date, check_out_date) for range join",
+      "HAVING COUNT > 1 filters only overlapping dates efficiently"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Check-out date is not inclusive \u2014 same-day checkout/checkin is not an overlap",
+      "Three or more customers overlapping on the same date for the same room",
+      "Booking with NULL check_in or check_out dates",
+      "Single-night booking (check_in and check_out one day apart)",
+      "Booking spanning into the next month beyond calendar_dim range"
     ]
   },
 
@@ -779,46 +974,100 @@ Tables: relations
 | c_id        | int       |
 | p_id        | int       |
 +-------------+-----------+`,
-    schema: [],
-    sampleData: ``,
+    schema: [
+      {
+        name: "people",
+        columns: [
+          { name: "id", type: "int" },
+          { name: "name", type: "varchar(20)" },
+          { name: "gender", type: "char(2)" }
+        ]
+      },
+      {
+        name: "relations",
+        columns: [
+          { name: "c_id", type: "int" },
+          { name: "p_id", type: "int" }
+        ]
+      }
+    ],
+    sampleData: `DROP TABLE IF EXISTS people;
+DROP TABLE IF EXISTS relations;
+
+CREATE TABLE people (
+  id INT,
+  name VARCHAR(20),
+  gender CHAR(2)
+);
+
+CREATE TABLE relations (
+  c_id INT,
+  p_id INT
+);
+
+INSERT INTO people VALUES
+(1, 'Alice', 'F'),
+(2, 'Bob', 'M'),
+(3, 'Charlie', 'M'),
+(4, 'Diana', 'F'),
+(5, 'Eve', 'F'),
+(6, 'Frank', 'M'),
+(7, 'Grace', 'F'),
+(8, 'Henry', 'M');
+
+INSERT INTO relations VALUES
+(3, 1),
+(3, 2),
+(5, 1),
+(5, 2),
+(7, 4),
+(7, 6),
+(8, 4);
+`,
     mySolution: `WITH mother_father AS (
     SELECT r.c_id AS child_id,
-           max(p1.name) AS mother_name,
-           max(p2.name) AS father_name
+           MAX(p1.name) AS mother_name,
+           MAX(p2.name) AS father_name
     FROM relations r
-    LEFT JOIN people p1 ON r.p_id = p1.id AND p1.gender = 'F' -- Join with people table to get mother's name
-    LEFT JOIN people p2 ON r.p_id = p2.id AND p2.gender = 'M' -- Join with people table to get father's name
-    group by r.c_id
+    LEFT JOIN people p1 ON r.p_id = p1.id AND p1.gender = 'F'
+    LEFT JOIN people p2 ON r.p_id = p2.id AND p2.gender = 'M'
+    GROUP BY r.c_id
 )
 SELECT p.name AS child_name,
        mf.mother_name,
        mf.father_name
 FROM people p
 INNER JOIN mother_father mf ON p.id = mf.child_id
-order by child_name;`,
+ORDER BY child_name;`,
     systemSolution: `WITH mother_father AS (
     SELECT r.c_id AS child_id,
-           max(p1.name) AS mother_name,
-           max(p2.name) AS father_name
+           MAX(p1.name) AS mother_name,
+           MAX(p2.name) AS father_name
     FROM relations r
-    LEFT JOIN people p1 ON r.p_id = p1.id AND p1.gender = 'F' -- Join with people table to get mother's name
-    LEFT JOIN people p2 ON r.p_id = p2.id AND p2.gender = 'M' -- Join with people table to get father's name
-    group by r.c_id
+    LEFT JOIN people p1 ON r.p_id = p1.id AND p1.gender = 'F'
+    LEFT JOIN people p2 ON r.p_id = p2.id AND p2.gender = 'M'
+    GROUP BY r.c_id
 )
 SELECT p.name AS child_name,
        mf.mother_name,
        mf.father_name
 FROM people p
 INNER JOIN mother_father mf ON p.id = mf.child_id
-order by child_name;`,
-    starterCode: `-- Child and Parents\n-- Write your solution here\nSELECT 1;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+ORDER BY child_name;`,
+    starterCode: `-- Child and Parents\n-- Write your solution here\nSELECT *\nFROM people;`,
+    businessImpact: `Family relationship mapping from normalized relational data is essential in healthcare (genetic history), insurance (dependent coverage), legal systems (inheritance), and CRM systems (household grouping for family-based promotions).`,
+    optimizationTips: [
+      "Double LEFT JOIN with gender filter efficiently pivots parent rows into mother/father columns",
+      "MAX aggregation with GROUP BY handles the pivot since each child has at most one mother and one father",
+      "Index on relations (c_id) and people (id, gender) for join performance",
+      "Could use conditional aggregation: MAX(CASE WHEN gender='F' THEN name END) in a single join"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Child with only one parent in relations table \u2014 other parent shows as NULL",
+      "Child with no parents in relations \u2014 excluded by INNER JOIN",
+      "Person who is both a parent and a child",
+      "Two parents of same gender (data quality issue)",
+      "Orphan records in relations table (p_id not in people)"
     ]
   },
 
@@ -855,43 +1104,62 @@ CREATE TABLE elections (
   party_name VARCHAR(10),
   votes INT
 );
+
+INSERT INTO elections VALUES
+('Mumbai', 1, 'PartyA', 50000),
+('Mumbai', 2, 'PartyB', 45000),
+('Delhi', 3, 'PartyA', 60000),
+('Delhi', 4, 'PartyB', 60000),
+('Chennai', 5, 'PartyA', 35000),
+('Chennai', 6, 'PartyC', 40000),
+('Kolkata', 7, 'PartyB', 55000),
+('Kolkata', 8, 'PartyC', 30000),
+('Bangalore', 9, 'PartyA', 48000),
+('Bangalore', 10, 'PartyB', 42000),
+('Bangalore', 11, 'PartyC', 48000);
 `,
-    mySolution: `with cte as (
-select  
-, rank() over(partition by district_name order by votes desc) as rn
-from elections
+    mySolution: `WITH cte AS (
+SELECT *,
+  RANK() OVER(PARTITION BY district_name ORDER BY votes DESC) AS rn
+FROM elections
+),
+cte_total_seats AS (
+SELECT COUNT(DISTINCT district_name) AS total_seats FROM elections
 )
-, cte_total_seats as (
-select count(distinct district_name) as total_seats from elections
+SELECT party_name, COUNT(*) AS seats_won,
+  CASE WHEN COUNT(*) > total_seats * 0.5 THEN 'Winner' ELSE 'Loser' END AS result
+FROM cte, cte_total_seats
+WHERE rn = 1
+GROUP BY party_name, total_seats
+ORDER BY seats_won DESC;`,
+    systemSolution: `WITH cte AS (
+SELECT *,
+  RANK() OVER(PARTITION BY district_name ORDER BY votes DESC) AS rn
+FROM elections
+),
+cte_total_seats AS (
+SELECT COUNT(DISTINCT district_name) AS total_seats FROM elections
 )
-select party_name, count() as seats_won
-, case when count()>total_seats0.5 then 'Winner' else 'Loser' end as result
-from cte , cte_total_seats
-where rn=1
-group by party_name,total_seats
-order by seats_won desc;`,
-    systemSolution: `with cte as (
-select  
-, rank() over(partition by district_name order by votes desc) as rn
-from elections
-)
-, cte_total_seats as (
-select count(distinct district_name) as total_seats from elections
-)
-select party_name, count() as seats_won
-, case when count()>total_seats0.5 then 'Winner' else 'Loser' end as result
-from cte , cte_total_seats
-where rn=1
-group by party_name,total_seats
-order by seats_won desc;`,
+SELECT party_name, COUNT(*) AS seats_won,
+  CASE WHEN COUNT(*) > total_seats * 0.5 THEN 'Winner' ELSE 'Loser' END AS result
+FROM cte, cte_total_seats
+WHERE rn = 1
+GROUP BY party_name, total_seats
+ORDER BY seats_won DESC;`,
     starterCode: `-- Election Winner\n-- Write your solution here\nSELECT *\nFROM elections;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Election analysis with district-level winner determination and national seat aggregation mirrors real-world parliamentary systems. The 50% threshold logic enables automated winner declaration, useful for election commissions, media dashboards, and political analytics platforms.`,
+    optimizationTips: [
+      "RANK() handles ties correctly \u2014 multiple candidates can win a district",
+      "Cross join with CTE for total_seats avoids correlated subquery",
+      "Index on (district_name, votes) for efficient PARTITION BY + ORDER BY",
+      "COUNT(*) with GROUP BY is more efficient than subquery-based counting"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Tie in a district \u2014 both candidates declared winners, inflates seat count",
+      "All candidates in a district have the same votes",
+      "Party with exactly 50% of seats \u2014 strictly greater means they don't win",
+      "District with only one candidate",
+      "Candidate with zero votes"
     ]
   },
 
@@ -918,38 +1186,74 @@ Tables: tickets
 | oneway_round   | char(1)     |
 | ticket_count   | int         |
 +----------------+-------------+`,
-    schema: [],
-    sampleData: ``,
-    mySolution: `with all_flight as (select destination,origin,ticket_count
-from tickets
-where oneway_round='R'
-and ticket_count is not null
-union all
-select origin,destination,ticket_count
-from tickets)
-select destination,origin,sum(ticket_count ) as tc
-from all_flight
-group by destination,origin
-order by tc desc
-limit 1`,
-    systemSolution: `select origin,destination, SUM(ticket_count) as tc
- from (select origin,destination,ticket_count
- from tickets
- union all
-  select destination,origin,ticket_count
- from tickets
- where oneway_round='R') A
- group by origin,destination
- order by tc desc	
- LIMIT 1;`,
-    starterCode: `-- Busiest Airline Route\n-- Write your solution here\nSELECT 1;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    schema: [
+      {
+        name: "tickets",
+        columns: [
+          { name: "airline_number", type: "varchar(10)" },
+          { name: "origin", type: "varchar(3)" },
+          { name: "destination", type: "varchar(3)" },
+          { name: "oneway_round", type: "char(1)" },
+          { name: "ticket_count", type: "int" }
+        ]
+      }
+    ],
+    sampleData: `DROP TABLE IF EXISTS tickets;
+
+CREATE TABLE tickets (
+  airline_number VARCHAR(10),
+  origin VARCHAR(3),
+  destination VARCHAR(3),
+  oneway_round CHAR(1),
+  ticket_count INT
+);
+
+INSERT INTO tickets VALUES
+('AI101', 'DEL', 'BOM', 'R', 150),
+('AI102', 'DEL', 'BOM', 'O', 80),
+('AI103', 'BOM', 'DEL', 'O', 120),
+('AI104', 'DEL', 'MAA', 'R', 90),
+('AI105', 'MAA', 'BOM', 'O', 60),
+('AI106', 'BOM', 'MAA', 'R', 70),
+('AI107', 'DEL', 'CCU', 'O', 50);
+`,
+    mySolution: `WITH all_flight AS (
+SELECT destination, origin, ticket_count
+FROM tickets
+WHERE oneway_round = 'R'
+AND ticket_count IS NOT NULL
+UNION ALL
+SELECT origin, destination, ticket_count
+FROM tickets
+)
+SELECT destination, origin, SUM(ticket_count) AS tc
+FROM all_flight
+GROUP BY destination, origin
+ORDER BY tc DESC
+LIMIT 1`,
+    systemSolution: `SELECT origin, destination, SUM(ticket_count) AS tc
+FROM (
+  SELECT origin, destination, ticket_count FROM tickets
+  UNION ALL
+  SELECT destination, origin, ticket_count FROM tickets WHERE oneway_round = 'R'
+) A
+GROUP BY origin, destination
+ORDER BY tc DESC
+LIMIT 1;`,
+    starterCode: `-- Busiest Airline Route\n-- Write your solution here\nSELECT *\nFROM tickets;`,
+    businessImpact: `Route traffic analysis helps airlines optimize fleet allocation, adjust frequency on high-demand routes, and identify underperformance. Distinguishing one-way vs round-trip tickets provides insight into travel patterns and helps with revenue management pricing.`,
+    optimizationTips: [
+      "UNION ALL for round trips doubles the contribution to both origin and destination routes",
+      "LIMIT 1 with ORDER BY DESC efficiently finds the top route without scanning all results",
+      "Index on (origin, destination) and (oneway_round) for partition pruning",
+      "Consider FETCH FIRST 1 ROW ONLY as PostgreSQL standard alternative to LIMIT"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Multiple routes tied for busiest \u2014 LIMIT 1 returns arbitrary one; use RANK for all ties",
+      "NULL ticket_count values \u2014 excluded from SUM",
+      "DEL→BOM and BOM→DEL are different routes per problem specification",
+      "Round trip ticket already counted from origin→dest, UNION ALL adds dest→origin",
+      "Route with only round-trip tickets vs only one-way tickets"
     ]
   },
 
@@ -983,51 +1287,69 @@ CREATE TABLE credit_card_transactions (
   gender VARCHAR(1),
   amount INT
 );
+
+INSERT INTO credit_card_transactions VALUES
+(1, 'Mumbai', '2024-01-05', 'Gold', 'M', 5000),
+(2, 'Mumbai', '2024-01-10', 'Silver', 'F', 3000),
+(3, 'Mumbai', '2024-01-15', 'Platinum', 'M', 8000),
+(4, 'Mumbai', '2024-02-01', 'Gold', 'F', 4000),
+(5, 'Delhi', '2024-01-08', 'Gold', 'M', 6000),
+(6, 'Delhi', '2024-01-12', 'Silver', 'F', 2000),
+(7, 'Delhi', '2024-01-20', 'Platinum', 'M', 7000),
+(8, 'Delhi', '2024-02-05', 'Silver', 'F', 1500),
+(9, 'Chennai', '2024-01-03', 'Gold', 'M', 4500),
+(10, 'Chennai', '2024-01-18', 'Platinum', 'F', 9000),
+(11, 'Chennai', '2024-02-10', 'Silver', 'M', 2500);
 `,
-    mySolution: `with transactions as (
-select 
-	city,
-	card_type,
-	SUM(amount) as amt
-from credit_card_transactions
-group by city,card_type)
-, cte as (select city,card_type,
-rank() over (partition by city order by amt desc ) as hr,
-rank() over (partition by city order by amt asc ) as lr
-from transactions)
-select city,
-max(case when hr=1 then card_type end) as highest_expense_type,
-max(case when lr=1 then card_type  end )as lowest_expense_type
-from cte
-where hr=1 or lr=1
-group by city
-order by city`,
-    systemSolution: `with cte as (
-select city,card_type,sum(amount) as total_spend 
-from credit_card_transactions
-group by city,card_type
+    mySolution: `WITH transactions AS (
+SELECT city, card_type, SUM(amount) AS amt
+FROM credit_card_transactions
+GROUP BY city, card_type
+),
+cte AS (
+SELECT city, card_type,
+  RANK() OVER (PARTITION BY city ORDER BY amt DESC) AS hr,
+  RANK() OVER (PARTITION BY city ORDER BY amt ASC) AS lr
+FROM transactions
 )
-,cte2 as (
-select 
-,rank() over(partition by city order by total_spend desc) rn_high
-,rank() over(partition by city order by total_spend) rn_low
-from cte
+SELECT city,
+  MAX(CASE WHEN hr = 1 THEN card_type END) AS highest_expense_type,
+  MAX(CASE WHEN lr = 1 THEN card_type END) AS lowest_expense_type
+FROM cte
+WHERE hr = 1 OR lr = 1
+GROUP BY city
+ORDER BY city`,
+    systemSolution: `WITH cte AS (
+SELECT city, card_type, SUM(amount) AS total_spend
+FROM credit_card_transactions
+GROUP BY city, card_type
+),
+cte2 AS (
+SELECT *,
+  RANK() OVER(PARTITION BY city ORDER BY total_spend DESC) AS rn_high,
+  RANK() OVER(PARTITION BY city ORDER BY total_spend) AS rn_low
+FROM cte
 )
-select city
-, max(case when rn_high=1 then card_type end) as highest_expense_type
-, max(case when rn_low=1 then card_type end) as lowest_expense_type
-from cte2
-where rn_high=1 or rn_low=1
-group by city
+SELECT city,
+  MAX(CASE WHEN rn_high = 1 THEN card_type END) AS highest_expense_type,
+  MAX(CASE WHEN rn_low = 1 THEN card_type END) AS lowest_expense_type
+FROM cte2
+WHERE rn_high = 1 OR rn_low = 1
+GROUP BY city
 ORDER BY city;`,
     starterCode: `-- Credit Card Transactions (Part-2)\n-- Write your solution here\nSELECT *\nFROM credit_card_transactions;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `City-level card type spending analysis reveals consumer payment preferences by geography, helping banks tailor card offerings, adjust credit limits, and design city-specific rewards programs for different card tiers.`,
+    optimizationTips: [
+      "Double RANK() in one pass avoids scanning data twice",
+      "MAX with CASE WHEN pivots high/low into columns efficiently",
+      "WHERE filter on hr=1 OR lr=1 before GROUP BY reduces rows to aggregate",
+      "Index on (city, card_type) for grouped aggregation"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "City with only one card type \u2014 same card is both highest and lowest",
+      "Tied spending between card types \u2014 RANK gives same rank to both",
+      "City with NULL amounts \u2014 affects SUM",
+      "Card type with zero transactions in a city"
     ]
   },
 
@@ -1061,24 +1383,40 @@ CREATE TABLE user_passwords (
   user_name VARCHAR(10),
   password VARCHAR(20)
 );
+
+INSERT INTO user_passwords VALUES
+(1, 'Alice', 'Passw0rd@1'),
+(2, 'Bob', 'short1@'),
+(3, 'Carol', 'NoSpecial1abc'),
+(4, 'Dave', 'Good#Pass9'),
+(5, 'Eve', 'has space@1A'),
+(6, 'Frank', '12345678@'),
+(7, 'Grace', 'Abcdefgh'),
+(8, 'Henry', 'V@lid1Pass');
 `,
     mySolution: null,
     systemSolution: `SELECT user_id, user_name
 FROM user_passwords
-WHERE 
-LENGTH(Password) >= 8 AND  -- At least 8 characters long
-    Password REGEXP '[A-Za-z]' AND  -- Contains at least one letter
-    Password REGEXP '[0-9]' AND  -- Contains at least one digit
-    Password REGEXP '[@#$%^&]' AND  -- Contains at least one special character
-    Password NOT LIKE '% %';  -- Does not contain spaces`,
+WHERE
+  LENGTH(password) >= 8
+  AND password ~ '[A-Za-z]'
+  AND password ~ '[0-9]'
+  AND password ~ '[@#$%^&*]'
+  AND password NOT LIKE '% %';`,
     starterCode: `-- Users With Valid Passwords\n-- Write your solution here\nSELECT *\nFROM user_passwords;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Password validation queries help security teams audit existing user accounts for weak credentials, identify accounts requiring password resets, and ensure compliance with organizational security policies without exposing actual passwords.`,
+    optimizationTips: [
+      "Use PostgreSQL's ~ operator instead of MySQL's REGEXP for regex matching",
+      "Multiple regex checks are clearer than one complex pattern",
+      "NOT LIKE '% %' is more readable than regex for space detection",
+      "Consider using CHECK constraints on the table itself instead of query-time validation"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Password exactly 8 characters \u2014 passes length check",
+      "Password with only special chars and digits but no letters \u2014 fails letter check",
+      "Leading or trailing spaces in password",
+      "NULL password values",
+      "Special characters not in the allowed set (e.g., ! or ?)"
     ]
   },
 
@@ -1107,58 +1445,50 @@ CREATE TABLE student_courses (
   course_id INT,
   major_flag VARCHAR(1)
 );
-`,
-    mySolution: `with cte as(select 
-student_id
-from student_courses
-GROUP BY student_id
-HAVING COUNT(course_id) =1)
-select distinct s.student_id,s.course_id
-From cte  c
-left join student_courses s
-on c.student_id=s.student_id or s.major_flag='Y'
-order by s.student_id
 
-WITH student_course_counts AS (
-    SELECT 
-        student_id,
-        course_id,
-        major_flag,
-        COUNT() OVER (PARTITION BY student_id) AS course_count
+INSERT INTO student_courses VALUES
+(1, 101, 'Y'),
+(1, 102, 'N'),
+(1, 103, 'N'),
+(2, 201, 'N'),
+(3, 301, 'Y'),
+(3, 302, 'N'),
+(4, 401, 'N'),
+(5, 501, 'Y'),
+(5, 502, 'Y');
+`,
+    mySolution: `WITH student_course_counts AS (
+    SELECT student_id, course_id, major_flag,
+        COUNT(*) OVER (PARTITION BY student_id) AS course_count
     FROM student_courses
 )
-SELECT 
-    student_id,
-    course_id
+SELECT student_id, course_id
 FROM student_course_counts
-WHERE major_flag = 'Y' 
-   OR course_count = 1
-ORDER BY student_id;
-
-## Method_2
-with cte as(select ,
-case when count(student_id) over(partition by  student_id order by student_id) =1 then 'Y' else major_flag end as flag
-from student_courses)
-select student_id,course_id
-From cte 
-where flag ='Y'`,
+WHERE major_flag = 'Y' OR course_count = 1
+ORDER BY student_id;`,
     systemSolution: `SELECT student_id, course_id
 FROM student_courses
 WHERE major_flag = 'Y'
    OR student_id IN (
-       SELECT student_id 
-       FROM student_courses 
-       GROUP BY student_id 
-       HAVING COUNT() = 1
-   );`,
+       SELECT student_id
+       FROM student_courses
+       GROUP BY student_id
+       HAVING COUNT(*) = 1
+   )
+ORDER BY student_id;`,
     starterCode: `-- Student Major Subject\n-- Write your solution here\nSELECT *\nFROM student_courses;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Identifying primary courses per student helps universities optimize class scheduling, allocate department resources, track degree completion progress, and generate accurate enrollment reports for accreditation.`,
+    optimizationTips: [
+      "Window function approach (COUNT OVER) avoids correlated subquery",
+      "IN subquery approach is simpler but scans the table twice",
+      "Index on student_id for efficient grouping and partitioning",
+      "OR condition handles both cases: explicit major flag and single-course students"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Student enrolled in only one course with major_flag='N' \u2014 still their primary",
+      "Student with multiple major flags set to 'Y' \u2014 returns multiple rows",
+      "Student with no courses at all \u2014 not in the table",
+      "All courses for a student are electives (major_flag='N') with >1 course"
     ]
   },
 
@@ -1196,21 +1526,19 @@ Write an SQL query to identify the product names that have been sold at least 2 
         ]
       }
     ],
-    sampleData: `DROP TABLE IF EXISTS products;
+    sampleData: `DROP TABLE IF EXISTS sales;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS cities;
 
 CREATE TABLE products (
   product_id INT,
   product_name VARCHAR(12)
 );
 
-DROP TABLE IF EXISTS cities;
-
 CREATE TABLE cities (
   city_id INT,
   city_name VARCHAR(10)
 );
-
-DROP TABLE IF EXISTS sales;
 
 CREATE TABLE sales (
   sale_id INT,
@@ -1219,36 +1547,69 @@ CREATE TABLE sales (
   sale_date VARCHAR(12),
   quantity INT
 );
+
+INSERT INTO products VALUES
+(1, 'Laptop'),
+(2, 'Phone'),
+(3, 'Tablet');
+
+INSERT INTO cities VALUES
+(1, 'Mumbai'),
+(2, 'Delhi'),
+(3, 'Chennai');
+
+INSERT INTO sales VALUES
+(1, 1, 1, '2024-01-05', 2),
+(2, 1, 1, '2024-01-10', 1),
+(3, 1, 2, '2024-01-08', 3),
+(4, 1, 2, '2024-01-15', 1),
+(5, 1, 3, '2024-01-12', 2),
+(6, 1, 3, '2024-01-20', 1),
+(7, 2, 1, '2024-01-06', 4),
+(8, 2, 1, '2024-01-18', 2),
+(9, 2, 2, '2024-01-09', 1),
+(10, 2, 2, '2024-01-22', 3),
+(11, 2, 3, '2024-01-11', 1),
+(12, 3, 1, '2024-01-07', 2),
+(13, 3, 1, '2024-01-14', 1),
+(14, 3, 2, '2024-01-16', 1);
 `,
-    mySolution: `with cte as(select product_id,city_id,count()
-from sales
-group by product_id,city_id
-having  count() >=2 )
-select p.product_name
-from cte c
-inner join products p
-on c.product_id=p.product_id
-group by p.product_name
-having count(distinct city_id ) =(select count() from cities )`,
+    mySolution: `WITH cte AS (
+SELECT product_id, city_id, COUNT(*)
+FROM sales
+GROUP BY product_id, city_id
+HAVING COUNT(*) >= 2
+)
+SELECT p.product_name
+FROM cte c
+INNER JOIN products p ON c.product_id = p.product_id
+GROUP BY p.product_name
+HAVING COUNT(DISTINCT city_id) = (SELECT COUNT(*) FROM cities)`,
     systemSolution: `WITH product_sales AS (
     SELECT product_id, city_id
     FROM sales
     GROUP BY product_id, city_id
-	having COUNT() >= 2
+    HAVING COUNT(*) >= 2
 )
-    SELECT  p.product_name
-    FROM products p
-    JOIN product_sales ps ON p.product_id = ps.product_id
-	group by p.product_name
-    HAVING COUNT(DISTINCT ps.city_id) = (SELECT COUNT() FROM cities);`,
+SELECT p.product_name
+FROM products p
+JOIN product_sales ps ON p.product_id = ps.product_id
+GROUP BY p.product_name
+HAVING COUNT(DISTINCT ps.city_id) = (SELECT COUNT(*) FROM cities);`,
     starterCode: `-- Products Sold in All Cities\n-- Write your solution here\nSELECT *\nFROM products;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Identifying products with consistent sales across all operating cities helps supply chain teams ensure nationwide availability, detect distribution gaps, and recognize universally popular products for national marketing campaigns.`,
+    optimizationTips: [
+      "HAVING with subquery COUNT(*) FROM cities dynamically adapts to new cities",
+      "Two-phase approach: first filter by min sales per city, then check city coverage",
+      "Index on sales (product_id, city_id) for efficient grouping",
+      "COUNT(DISTINCT city_id) vs total cities uses relational division pattern"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Product sold in all cities but only once in one city \u2014 fails the >= 2 threshold",
+      "Empty cities table \u2014 COUNT(*) = 0, HAVING always true",
+      "New city added \u2014 query automatically requires sales in new city",
+      "Product with sales but not in products table (orphan records)",
+      "City with no sales at all for any product"
     ]
   },
 
@@ -1278,40 +1639,58 @@ CREATE TABLE reel (
   state VARCHAR,
   cumulative_views INT
 );
+
+INSERT INTO reel VALUES
+(1, '2024-01-01', 'California', 1000),
+(1, '2024-01-02', 'California', 2500),
+(1, '2024-01-03', 'California', 4200),
+(1, '2024-01-01', 'Texas', 500),
+(1, '2024-01-02', 'Texas', 1200),
+(1, '2024-01-03', 'Texas', 1800),
+(2, '2024-01-01', 'California', 800),
+(2, '2024-01-02', 'California', 1600),
+(2, '2024-01-03', 'California', 2100),
+(3, '2024-01-01', 'Texas', 2000),
+(3, '2024-01-02', 'Texas', 5000),
+(3, '2024-01-03', 'Texas', 9000);
 `,
-    mySolution: `with views as (select reel_id,state,record_date,
-	cumulative_views-
-	lag(cumulative_views,1,0) over(partition by reel_id,state order by record_date  ) as views
-from reel
-where cumulative_views is not null )
-select reel_id,state,
-round(avg(views),2) as Avg_Daily_Views
-from views
-group by reel_id,state
-order by Avg_Daily_Views desc;`,
-    systemSolution: `WITH MaxViews AS (
-    SELECT
-        Reel_id,
-        State,
-        MAX(Cumulative_Views) AS Max_Cumulative_Views,
-        COUNT() AS Days
-    FROM REEL
-    GROUP BY Reel_id, State
+    mySolution: `WITH views AS (
+SELECT reel_id, state, record_date,
+  cumulative_views -
+  LAG(cumulative_views, 1, 0) OVER(PARTITION BY reel_id, state ORDER BY record_date) AS views
+FROM reel
+WHERE cumulative_views IS NOT NULL
 )
-SELECT
-    Reel_id,
-    State,
-    ROUND(Max_Cumulative_Views / Days, 2) AS Avg_Daily_Views
+SELECT reel_id, state,
+  ROUND(AVG(views), 2) AS avg_daily_views
+FROM views
+GROUP BY reel_id, state
+ORDER BY avg_daily_views DESC;`,
+    systemSolution: `WITH MaxViews AS (
+    SELECT reel_id, state,
+        MAX(cumulative_views) AS max_cumulative_views,
+        COUNT(*) AS days
+    FROM reel
+    GROUP BY reel_id, state
+)
+SELECT reel_id, state,
+    ROUND(CAST(max_cumulative_views AS NUMERIC) / days, 2) AS avg_daily_views
 FROM MaxViews
-order by Avg_Daily_Views desc;`,
+ORDER BY avg_daily_views DESC;`,
     starterCode: `-- Reel Daily View Averages by State\n-- Write your solution here\nSELECT *\nFROM reel;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Regional content performance analysis helps social media platforms optimize content delivery networks, target advertising by geography, identify viral content in specific markets, and help creators understand their regional audience engagement.`,
+    optimizationTips: [
+      "LAG approach calculates daily increments from cumulative data accurately",
+      "MAX/COUNT approach is simpler but assumes linear growth (less accurate)",
+      "CAST to NUMERIC prevents integer division in PostgreSQL",
+      "Index on (reel_id, state, record_date) for efficient window function"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "First record for a reel-state combo \u2014 LAG defaults to 0, inflating first day views",
+      "NULL cumulative_views \u2014 filtered out or affects calculations",
+      "Cumulative views decreasing (data correction) \u2014 negative daily views",
+      "Single-day data for a reel-state \u2014 can't calculate daily average with LAG",
+      "Same reel in multiple states \u2014 partitioned correctly"
     ]
   },
 
@@ -1337,18 +1716,14 @@ You have a table named numbers containing a single column n. You are required to
 CREATE TABLE numbers (
   n INT
 );
+
+INSERT INTO numbers VALUES (1), (2), (3), (4), (5);
 `,
     mySolution: `WITH RECURSIVE NumberSeries AS (
-    SELECT
-        n AS original_number,
-        n AS expanded_number,
-        1 AS sequence_length
+    SELECT n AS original_number, n AS expanded_number, 1 AS sequence_length
     FROM numbers
     UNION ALL
-    SELECT
-        ns.original_number,
-        ns.expanded_number,
-        ns.sequence_length + 1
+    SELECT ns.original_number, ns.expanded_number, ns.sequence_length + 1
     FROM NumberSeries ns
     WHERE ns.sequence_length < ns.original_number
 )
@@ -1356,16 +1731,10 @@ SELECT expanded_number
 FROM NumberSeries
 ORDER BY original_number, sequence_length;`,
     systemSolution: `WITH RECURSIVE NumberSeries AS (
-    SELECT
-        n AS original_number,
-        n AS expanded_number,
-        1 AS sequence_length
+    SELECT n AS original_number, n AS expanded_number, 1 AS sequence_length
     FROM numbers
     UNION ALL
-    SELECT
-        ns.original_number,
-        ns.expanded_number,
-        ns.sequence_length + 1
+    SELECT ns.original_number, ns.expanded_number, ns.sequence_length + 1
     FROM NumberSeries ns
     WHERE ns.sequence_length < ns.original_number
 )
@@ -1373,13 +1742,19 @@ SELECT expanded_number
 FROM NumberSeries
 ORDER BY original_number, sequence_length;`,
     starterCode: `-- Sequence Expansion\n-- Write your solution here\nSELECT *\nFROM numbers;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Sequence expansion is a foundational pattern for generating test data, creating date ranges, expanding compressed records, and building report scaffolding. Recursive CTEs in PostgreSQL are powerful for hierarchical and iterative data generation.`,
+    optimizationTips: [
+      "WITH RECURSIVE is PostgreSQL's way to implement iterative expansion",
+      "Base case selects from the table; recursive case increments until limit",
+      "GENERATE_SERIES could be an alternative: CROSS JOIN LATERAL generate_series(1, n)",
+      "Monitor recursion depth \u2014 large n values can cause memory issues"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "n = 0 \u2014 no rows generated (WHERE sequence_length < 0 is never true)",
+      "n = 1 \u2014 appears exactly once from base case",
+      "Negative n values \u2014 sequence_length never < negative, no expansion",
+      "NULL n value \u2014 comparisons with NULL fail, no expansion",
+      "Very large n \u2014 could exceed recursive query limits"
     ]
   },
 
@@ -1405,32 +1780,44 @@ Assume that employees can only be promoted and cannot be demoted.`,
         name: "emp_2020",
         columns: [
           { name: "emp_id", type: "int" },
-          { name: "designation", type: "date" }
+          { name: "designation", type: "varchar" }
         ]
       },
       {
         name: "emp_2021",
         columns: [
           { name: "emp_id", type: "int" },
-          { name: "designation", type: "date" }
+          { name: "designation", type: "varchar" }
         ]
       }
     ],
     sampleData: `DROP TABLE IF EXISTS emp_2020;
+DROP TABLE IF EXISTS emp_2021;
 
 CREATE TABLE emp_2020 (
   emp_id INT,
-  designation DATE
+  designation VARCHAR
 );
-
-DROP TABLE IF EXISTS emp_2021;
 
 CREATE TABLE emp_2021 (
   emp_id INT,
-  designation DATE
+  designation VARCHAR
 );
+
+INSERT INTO emp_2020 VALUES
+(1, 'Trainee'),
+(2, 'Developer'),
+(3, 'Developer'),
+(4, 'Manager'),
+(5, 'Trainee');
+
+INSERT INTO emp_2021 VALUES
+(1, 'Developer'),
+(2, 'Developer'),
+(4, 'Senior Manager'),
+(6, 'Trainee');
 `,
-    mySolution: `SELECT 
+    mySolution: `SELECT
     COALESCE(e20.emp_id, e21.emp_id) AS emp_id,
     e20.designation AS designation_2020,
     e21.designation AS designation_2021,
@@ -1442,41 +1829,47 @@ CREATE TABLE emp_2021 (
     END AS status
 FROM emp_2020 e20
 FULL OUTER JOIN emp_2021 e21 ON e20.emp_id = e21.emp_id;`,
-    systemSolution: `SELECT 
+    systemSolution: `SELECT
     COALESCE(e20.emp_id, e21.emp_id) AS emp_id,
-    CASE 
+    CASE
         WHEN e20.designation != e21.designation THEN 'Promoted'
         WHEN e21.designation IS NULL THEN 'Resigned'
         ELSE 'New Hire'
     END AS comment
 FROM emp_2020 e20
 LEFT JOIN emp_2021 e21 ON e20.emp_id = e21.emp_id
-WHERE e20.designation != e21.designation 
-   OR e20.designation IS NULL 
+WHERE e20.designation != e21.designation
+   OR e20.designation IS NULL
    OR e21.designation IS NULL
 
-UNION 
+UNION
 
-SELECT 
+SELECT
     COALESCE(e20.emp_id, e21.emp_id) AS emp_id,
-    CASE 
+    CASE
         WHEN e20.designation != e21.designation THEN 'Promoted'
         WHEN e21.designation IS NULL THEN 'Resigned'
         ELSE 'New Hire'
     END AS comment
 FROM emp_2021 e21
 LEFT JOIN emp_2020 e20 ON e20.emp_id = e21.emp_id
-WHERE e20.designation != e21.designation 
-   OR e20.designation IS NULL 
+WHERE e20.designation != e21.designation
+   OR e20.designation IS NULL
    OR e21.designation IS NULL;`,
     starterCode: `-- Employees Status Change(Part-1)\n-- Write your solution here\nSELECT *\nFROM emp_2020;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Year-over-year employee status tracking helps HR teams identify promotion velocity, attrition patterns, and hiring effectiveness. This data feeds into workforce planning, retention strategies, and organizational health dashboards.`,
+    optimizationTips: [
+      "FULL OUTER JOIN approach is cleaner and handles all three statuses in one pass",
+      "UNION of two LEFT JOINs is an alternative when FULL OUTER JOIN isn't supported",
+      "COALESCE handles NULLs from the outer join to find the employee ID",
+      "Index on emp_id for efficient join between year tables"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Employee present in both years with same designation \u2014 no change",
+      "Employee only in 2020 \u2014 resigned",
+      "Employee only in 2021 \u2014 new hire",
+      "Employee with NULL designation in either year",
+      "Same emp_id with different designations \u2014 promoted (demotion not possible per assumption)"
     ]
   },
 
@@ -1503,7 +1896,7 @@ Assume that employees can only be promoted and cannot be demoted.`,
         columns: [
           { name: "emp_id", type: "int" },
           { name: "year", type: "int" },
-          { name: "designation", type: "date" }
+          { name: "designation", type: "varchar" }
         ]
       }
     ],
@@ -1512,67 +1905,85 @@ Assume that employees can only be promoted and cannot be demoted.`,
 CREATE TABLE employees (
   emp_id INT,
   year INT,
-  designation DATE
+  designation VARCHAR
 );
+
+INSERT INTO employees VALUES
+(1, 2020, 'Trainee'),
+(1, 2021, 'Developer'),
+(2, 2020, 'Developer'),
+(2, 2021, 'Developer'),
+(3, 2020, 'Developer'),
+(4, 2020, 'Manager'),
+(4, 2021, 'Senior Manager'),
+(5, 2020, 'Trainee'),
+(6, 2021, 'Trainee');
 `,
-    mySolution: `select 
-coalesce(e.emp_id,e1.emp_id) as emp_id,
-case when e.designation!=e1.designation then 'Promoted'
-when e1.emp_id is null then 'Resigned'
-else 'New Hire' end as comment
-from employees e
-left join employees e1
-on e.emp_id=e1.emp_id and e1.year=2021 
-where e.year!=e1.year and
-e.designation!=e1.designation or
-e1.year is null 
-union
-select 
-coalesce(e.emp_id,e1.emp_id) as emp_id,
-case when e.designation!=e1.designation then 'Promoted'
-when e1.emp_id is null then 'New Hire'
-else 'Resigned' end as comment
-from employees e
-left join employees e1
-on e.emp_id=e1.emp_id and e.year>e1.year 
-where e.year!=2020 and e1.emp_id is null`,
-    systemSolution: `SELECT 
+    mySolution: `SELECT
+  COALESCE(e.emp_id, e1.emp_id) AS emp_id,
+  CASE
+    WHEN e.designation != e1.designation THEN 'Promoted'
+    WHEN e1.emp_id IS NULL THEN 'Resigned'
+    ELSE 'New Hire'
+  END AS comment
+FROM employees e
+LEFT JOIN employees e1 ON e.emp_id = e1.emp_id AND e1.year = 2021
+WHERE e.year = 2020
+  AND (e.designation != e1.designation OR e1.year IS NULL)
+UNION
+SELECT
+  COALESCE(e.emp_id, e1.emp_id) AS emp_id,
+  CASE
+    WHEN e.designation != e1.designation THEN 'Promoted'
+    WHEN e1.emp_id IS NULL THEN 'New Hire'
+    ELSE 'Resigned'
+  END AS comment
+FROM employees e
+LEFT JOIN employees e1 ON e.emp_id = e1.emp_id AND e.year > e1.year
+WHERE e.year != 2020 AND e1.emp_id IS NULL`,
+    systemSolution: `SELECT
     COALESCE(e20.emp_id, e21.emp_id) AS emp_id,
-    CASE 
+    CASE
         WHEN e20.designation != e21.designation THEN 'Promoted'
         WHEN e21.designation IS NULL THEN 'Resigned'
         ELSE 'New Hire'
     END AS comment
 FROM employees e20
-LEFT JOIN employees e21 ON e20.emp_id = e21.emp_id and e21.year=2021
-WHERE e20.year=2020 
-   and (e20.designation != e21.designation 
-   OR e20.designation IS NULL 
+LEFT JOIN employees e21 ON e20.emp_id = e21.emp_id AND e21.year = 2021
+WHERE e20.year = 2020
+   AND (e20.designation != e21.designation
+   OR e20.designation IS NULL
    OR e21.designation IS NULL)
 
-UNION 
+UNION
 
-SELECT 
+SELECT
     COALESCE(e20.emp_id, e21.emp_id) AS emp_id,
-    CASE 
+    CASE
         WHEN e20.designation != e21.designation THEN 'Promoted'
         WHEN e21.designation IS NULL THEN 'Resigned'
         ELSE 'New Hire'
     END AS comment
 FROM employees e21
-LEFT JOIN employees e20 ON e20.emp_id = e21.emp_id and e20.year=2020 
-WHERE e21.year=2021
-	and (e20.designation != e21.designation 
-   OR e20.designation IS NULL 
+LEFT JOIN employees e20 ON e20.emp_id = e21.emp_id AND e20.year = 2020
+WHERE e21.year = 2021
+  AND (e20.designation != e21.designation
+   OR e20.designation IS NULL
    OR e21.designation IS NULL);`,
     starterCode: `-- Employees Status Change(Part-2)\n-- Write your solution here\nSELECT *\nFROM employees;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Single-table year-over-year analysis uses self-join to compare employee records across time periods. This pattern is common in data warehouses storing slowly changing dimension data where historical records are preserved in the same table.`,
+    optimizationTips: [
+      "Self-join with year filter avoids pivot/unpivot operations",
+      "UNION removes duplicates from both LEFT JOIN directions",
+      "Index on (emp_id, year) for efficient self-join",
+      "FULL OUTER JOIN alternative is cleaner when supported"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Employee in both years with same designation \u2014 no change, not included",
+      "Employee only in 2020 \u2014 resigned",
+      "Employee only in 2021 \u2014 new hire",
+      "Employee with multiple records in same year",
+      "NULL designation in either year"
     ]
   },
 
@@ -1593,7 +2004,7 @@ Note: Dates are as per UTC time zone.`,
         name: "user_sessions",
         columns: [
           { name: "user_id", type: "int" },
-          { name: "login_timestamp", type: "datetime" }
+          { name: "login_timestamp", type: "timestamp" }
         ]
       }
     ],
@@ -1601,29 +2012,51 @@ Note: Dates are as per UTC time zone.`,
 
 CREATE TABLE user_sessions (
   user_id INT,
-  login_timestamp DATETIME
+  login_timestamp TIMESTAMP
 );
+
+INSERT INTO user_sessions VALUES
+(1, '2024-01-01 08:00:00'),
+(1, '2024-01-02 09:30:00'),
+(1, '2024-01-03 07:45:00'),
+(1, '2024-01-04 10:00:00'),
+(1, '2024-01-05 08:30:00'),
+(2, '2024-01-03 12:00:00'),
+(2, '2024-01-04 14:00:00'),
+(2, '2024-01-05 11:00:00'),
+(3, '2024-01-01 09:00:00'),
+(3, '2024-01-03 10:00:00'),
+(3, '2024-01-05 08:00:00');
 `,
-    mySolution: `with cte as(select user_id,
-min(date(login_timestamp)) as 1st_date,
-count(distinct date(login_timestamp)) as cnt
-from user_sessions
-group by user_id)
-select user_id
-from cte
-where cnt=timestampdiff(day,1st_date,current_date)+1`,
+    mySolution: `WITH cte AS (
+SELECT user_id,
+  MIN(CAST(login_timestamp AS DATE)) AS first_date,
+  COUNT(DISTINCT CAST(login_timestamp AS DATE)) AS cnt
+FROM user_sessions
+GROUP BY user_id
+)
+SELECT user_id
+FROM cte
+WHERE cnt = (CURRENT_DATE - first_date) + 1`,
     systemSolution: `SELECT user_id
 FROM user_sessions
 GROUP BY user_id
-HAVING COUNT(DISTINCT DATE(login_timestamp)) = DATEDIFF(CURDATE(), MIN(login_timestamp)) + 1;`,
+HAVING COUNT(DISTINCT CAST(login_timestamp AS DATE)) =
+  (CURRENT_DATE - MIN(CAST(login_timestamp AS DATE))) + 1;`,
     starterCode: `-- Music Lovers\n-- Write your solution here\nSELECT *\nFROM user_sessions;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Identifying consistently engaged users helps Spotify measure platform stickiness, target retention campaigns, and understand what drives daily active usage. These "power users" are valuable for beta testing and premium upselling.`,
+    optimizationTips: [
+      "PostgreSQL date subtraction returns integer days directly (no DATEDIFF needed)",
+      "CURRENT_DATE replaces MySQL's CURDATE()",
+      "CAST(timestamp AS DATE) extracts date portion in PostgreSQL",
+      "Index on (user_id, login_timestamp) for efficient grouping"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "User who joined today \u2014 cnt=1 and date diff+1=1, consistent",
+      "Multiple logins on the same day \u2014 COUNT(DISTINCT date) handles this",
+      "User with gap in login dates \u2014 cnt < expected, not consistent",
+      "NULL login_timestamp values",
+      "Timezone considerations if logins cross midnight"
     ]
   },
 
@@ -1664,31 +2097,43 @@ CREATE TABLE customers (
   phone VARCHAR,
   address VARCHAR
 );
+
+INSERT INTO customers VALUES
+(1, '  John Smith  ', 'John@Email.COM', '123-456-7890', '123 Main St'),
+(2, 'Jane Doe', 'JANE@email.com', '(987) 654 3210', NULL),
+(3, ' Bob Wilson', 'john@email.com', '555.123.4567', '456 Oak Ave'),
+(4, 'Alice Brown  ', 'Alice@Email.Com', '111-222-3333', '789 Pine Rd'),
+(5, 'Charlie', 'jane@EMAIL.COM', '444 555 6666', NULL);
 `,
     mySolution: null,
     systemSolution: `WITH RankedCustomers AS (
-    SELECT 
+    SELECT
         customer_id,
-        TRIM(customer_name) AS customer_name,  -- Trim spaces from customer_name
-        LOWER(TRIM(email)) AS email,  -- Convert email to lowercase and trim spaces
-        REGEXP_REPLACE(phone, '[^0-9]', '') AS phone,  -- Remove non-digit characters from phone
-        COALESCE(address, 'Unknown') AS address,  -- Replace NULL address with 'Unknown'
-        ROW_NUMBER() OVER (PARTITION BY LOWER(TRIM(email)) ORDER BY customer_id) AS rn  
-        -- Assigns a rank to each duplicate email, keeping the one with the lowest customer_id
+        TRIM(customer_name) AS customer_name,
+        LOWER(TRIM(email)) AS email,
+        REGEXP_REPLACE(phone, '[^0-9]', '', 'g') AS phone,
+        COALESCE(address, 'Unknown') AS address,
+        ROW_NUMBER() OVER (PARTITION BY LOWER(TRIM(email)) ORDER BY customer_id) AS rn
     FROM customers
 )
-SELECT customer_id, customer_name, email, phone, address 
+SELECT customer_id, customer_name, email, phone, address
 FROM RankedCustomers
 WHERE rn = 1
-order by customer_id;`,
+ORDER BY customer_id;`,
     starterCode: `-- Customer Data Cleaning\n-- Write your solution here\nSELECT *\nFROM customers;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Data cleansing queries are critical for maintaining CRM integrity. Deduplication by email prevents over-counting customers, while standardized phone formats enable SMS campaigns. NULL address handling ensures complete mailing lists for physical marketing.`,
+    optimizationTips: [
+      "REGEXP_REPLACE with 'g' flag for global replacement in PostgreSQL (MySQL doesn't need it)",
+      "ROW_NUMBER with PARTITION BY deduplicates while keeping the lowest customer_id",
+      "COALESCE replaces NULL with defaults in one pass",
+      "LOWER + TRIM normalization before partitioning ensures accurate deduplication"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Multiple records with same email but different case/spacing",
+      "NULL email \u2014 all NULL emails would be grouped together",
+      "Phone number with only special characters \u2014 becomes empty string",
+      "Address is empty string vs NULL \u2014 COALESCE only catches NULL",
+      "Customer name with internal multiple spaces"
     ]
   },
 
@@ -1724,41 +2169,54 @@ CREATE TABLE employees (
   department VARCHAR,
   salary INT
 );
+
+INSERT INTO employees VALUES
+(1, 'Alice', 'Engineering', 90000),
+(2, 'Bob', 'Engineering', 85000),
+(3, 'Carol', 'Engineering', 85000),
+(4, 'Dave', 'Marketing', 70000),
+(5, 'Eve', 'Marketing', 70000),
+(6, 'Frank', 'Sales', 60000),
+(7, 'Grace', 'HR', 75000),
+(8, 'Henry', 'HR', 72000);
 `,
-    mySolution: `with cte as(select
- department,salary,
-dense_rank() OVER(PARTITION BY department ORDER BY SALARY DESC) AS RN
-from employees
+    mySolution: `WITH cte AS (
+SELECT department, salary,
+  DENSE_RANK() OVER(PARTITION BY department ORDER BY salary DESC) AS rn
+FROM employees
 WHERE salary IS NOT NULL
 )
-select department,
-max(case when RN=1 THEN salary END),
-max(case when RN=2 THEN salary END) AS SalaryDifference
-from cte
-group by department
-ORDER BY  department`,
+SELECT department,
+  MAX(CASE WHEN rn = 1 THEN salary END) -
+  MAX(CASE WHEN rn = 2 THEN salary END) AS SalaryDifference
+FROM cte
+GROUP BY department
+ORDER BY department`,
     systemSolution: `WITH RankedSalaries AS (
-    SELECT 
-        Department, 
-        Salary,
-        DENSE_RANK() OVER (PARTITION BY Department ORDER BY Salary DESC) AS rnk
+    SELECT department, salary,
+        DENSE_RANK() OVER (PARTITION BY department ORDER BY salary DESC) AS rnk
     FROM employees
 )
-SELECT 
-    Department,
-    MAX(CASE WHEN rnk = 1 THEN Salary END) - 
-        MAX(CASE WHEN rnk = 2 THEN Salary END) AS SalaryDifference
+SELECT department,
+    MAX(CASE WHEN rnk = 1 THEN salary END) -
+    MAX(CASE WHEN rnk = 2 THEN salary END) AS SalaryDifference
 FROM RankedSalaries
-GROUP BY Department
-ORDER BY Department;`,
+GROUP BY department
+ORDER BY department;`,
     starterCode: `-- Salary Difference\n-- Write your solution here\nSELECT *\nFROM employees;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Salary gap analysis between top earners helps HR identify pay compression issues, ensure competitive compensation, and assess whether top performers are adequately differentiated from peers within each department.`,
+    optimizationTips: [
+      "DENSE_RANK handles tied salaries correctly \u2014 same salary gets same rank",
+      "MAX with CASE WHEN pivots ranked rows into columnar format",
+      "Subtraction of NULLs (single-employee department) naturally returns NULL",
+      "Index on (department, salary DESC) for efficient ranking"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Department with only one employee \u2014 no second rank, returns NULL",
+      "All employees in department have same salary \u2014 no rank 2, returns NULL",
+      "NULL salary values \u2014 should be filtered out",
+      "Department with exactly two distinct salary levels",
+      "Negative salary difference (impossible with DESC ranking)"
     ]
   },
 
@@ -1801,52 +2259,61 @@ CREATE TABLE users (
   insurance_type VARCHAR,
   risk VARCHAR
 );
+
+INSERT INTO users VALUES
+('U001', 'Term Life', 'Low'),
+('U002', 'Health', 'Medium'),
+('U003', 'Endowment', 'High'),
+('U004', 'Whole Life', 'Low'),
+('U005', 'Health', 'Low'),
+('U006', 'Endowment', 'Medium'),
+('U007', 'Term Life', 'High');
 `,
-    mySolution: `with cte as(select ,
-case 
-when insurance_type in ('Term Life','Whole Life') then 12100
-when insurance_type='Health' then 12400
-when insurance_type='Endowment' then 12500 end as premium,
-case 
-when insurance_type in ('Term Life','Whole Life') and risk='Low' then 0.1
-when insurance_type in ('Term Life','Whole Life') and risk='Medium' then 0.085 
-when insurance_type in ('Term Life','Whole Life') and risk='High' then 0.07
-when insurance_type ='Health' and risk='Low' then 0.02
-when insurance_type ='Health' and risk='Medium' then 0.015
-when insurance_type ='Health' and risk='High' then 0.01
-when insurance_type ='Endowment' and risk='Low' then 0.15
-when insurance_type ='Endowment' and risk='Medium' then 0.12
-when insurance_type ='Endowment' and risk='High' then 0.1
-end as risk_per
-from users)
-select user_id,insurance_type,risk,
-sum(premiumrisk_per)
-from cte
-group by user_id,insurance_type,risk
-order by user_id`,
+    mySolution: `WITH cte AS (
+SELECT *,
+  CASE
+    WHEN insurance_type IN ('Term Life', 'Whole Life') THEN 12 * 100
+    WHEN insurance_type = 'Health' THEN 12 * 400
+    WHEN insurance_type = 'Endowment' THEN 12 * 500
+  END AS premium,
+  CASE
+    WHEN insurance_type IN ('Term Life', 'Whole Life') AND risk = 'Low' THEN 0.1
+    WHEN insurance_type IN ('Term Life', 'Whole Life') AND risk = 'Medium' THEN 0.085
+    WHEN insurance_type IN ('Term Life', 'Whole Life') AND risk = 'High' THEN 0.07
+    WHEN insurance_type = 'Health' AND risk = 'Low' THEN 0.02
+    WHEN insurance_type = 'Health' AND risk = 'Medium' THEN 0.015
+    WHEN insurance_type = 'Health' AND risk = 'High' THEN 0.01
+    WHEN insurance_type = 'Endowment' AND risk = 'Low' THEN 0.15
+    WHEN insurance_type = 'Endowment' AND risk = 'Medium' THEN 0.12
+    WHEN insurance_type = 'Endowment' AND risk = 'High' THEN 0.1
+  END AS risk_per
+FROM users
+)
+SELECT user_id, insurance_type, risk,
+  ROUND(SUM(premium * risk_per)) AS insured_amount
+FROM cte
+GROUP BY user_id, insurance_type, risk
+ORDER BY user_id`,
     systemSolution: `WITH insurance_counts AS (
-    SELECT
-        insurance_type,
-        COUNT() AS policy_count
+    SELECT insurance_type,
+        COUNT(*) AS policy_count
     FROM users
     GROUP BY insurance_type
 ),
 total_collection AS (
-    SELECT
-        SUM(
-            CASE
-                WHEN insurance_type IN ('Term Life', 'Whole Life')
-                    THEN policy_count  12  100
-                WHEN insurance_type = 'Health'
-                    THEN policy_count  12  400
-                ELSE
-                    policy_count  12  500
-            END
-        ) AS total_collection
+    SELECT SUM(
+        CASE
+            WHEN insurance_type IN ('Term Life', 'Whole Life')
+                THEN policy_count * 12 * 100
+            WHEN insurance_type = 'Health'
+                THEN policy_count * 12 * 400
+            ELSE
+                policy_count * 12 * 500
+        END
+    ) AS total_collection
     FROM insurance_counts
 )
-SELECT
-    u.,
+SELECT u.*,
     ROUND(
         CASE
             WHEN u.insurance_type IN ('Term Life', 'Whole Life') THEN
@@ -1868,20 +2335,25 @@ SELECT
                     ELSE                        0.10
                 END
         END
-         t.total_collection
+        * t.total_collection
     ) AS insured_amount
 FROM users u
 CROSS JOIN total_collection t
-ORDER BY u.user_id
-;`,
+ORDER BY u.user_id;`,
     starterCode: `-- Insured Amount\n-- Write your solution here\nSELECT *\nFROM users;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Insurance risk-based pricing ensures actuarial soundness by linking premiums to risk profiles. This calculation allows insurers to set appropriate coverage levels, maintain profitability, and offer competitive rates to low-risk customers while protecting against high-risk exposure.`,
+    optimizationTips: [
+      "Nested CASE expressions handle the two-dimensional lookup (insurance type \u00d7 risk level)",
+      "CROSS JOIN with total collection CTE efficiently shares the aggregate value",
+      "ROUND without decimal places gives integer result as required",
+      "Consider a lookup table instead of hardcoded CASE for maintainability"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Unknown insurance type or risk level \u2014 CASE returns NULL",
+      "User with no premium data \u2014 premium calculation yields NULL",
+      "All users in same risk category",
+      "Single user in the system \u2014 total collection is just their premium",
+      "Rounding precision with multiplication of decimals"
     ]
   },
 
@@ -1941,22 +2413,21 @@ Display the output in ascending order of customer id.`,
         ]
       }
     ],
-    sampleData: `DROP TABLE IF EXISTS customers;
+    sampleData: `DROP TABLE IF EXISTS customer_transactions;
+DROP TABLE IF EXISTS credit_card_bills;
+DROP TABLE IF EXISTS loans;
+DROP TABLE IF EXISTS customers;
 
 CREATE TABLE customers (
   customer_id INT,
   credit_limit INT
 );
 
-DROP TABLE IF EXISTS loans;
-
 CREATE TABLE loans (
   customer_id INT,
   loan_id INT,
   loan_due_date DATE
 );
-
-DROP TABLE IF EXISTS credit_card_bills;
 
 CREATE TABLE credit_card_bills (
   bill_amount INT,
@@ -1965,51 +2436,77 @@ CREATE TABLE credit_card_bills (
   customer_id INT
 );
 
-DROP TABLE IF EXISTS customer_transactions;
-
 CREATE TABLE customer_transactions (
   loan_bill_id INT,
   transaction_date DATE,
   transaction_type VARCHAR(10)
 );
+
+INSERT INTO customers VALUES (1, 50000), (2, 80000), (3, 30000);
+
+INSERT INTO loans VALUES
+(1, 101, '2023-03-15'),
+(2, 102, '2023-03-20'),
+(3, 103, '2023-03-10');
+
+INSERT INTO credit_card_bills VALUES
+(10000, '2023-03-05', 201, 1),
+(20000, '2023-03-10', 202, 2),
+(18000, '2023-03-08', 203, 3),
+(5000, '2023-03-15', 204, 1);
+
+INSERT INTO customer_transactions VALUES
+(101, '2023-03-14', 'Loan'),
+(102, '2023-03-21', 'Loan'),
+(103, '2023-03-09', 'Loan'),
+(201, '2023-03-04', 'Bill'),
+(202, '2023-03-12', 'Bill'),
+(203, '2023-03-07', 'Bill'),
+(204, '2023-03-16', 'Bill');
 `,
     mySolution: null,
     systemSolution: `WITH all_bills AS (
-    SELECT customer_id, loan_id AS bill_id, loan_due_date AS due_date, 0 AS bill_amount    --    Select loan bills with zero bill_amount
+    SELECT customer_id, loan_id AS bill_id, loan_due_date AS due_date, 0 AS bill_amount
     FROM loans
     UNION ALL
-    SELECT customer_id, bill_id, bill_due_date AS due_date, bill_amount                    --    Select credit card bills with actual amounts
+    SELECT customer_id, bill_id, bill_due_date AS due_date, bill_amount
     FROM credit_card_bills
 ),
 on_time_calc AS (
     SELECT b.customer_id,
-           SUM(b.bill_amount) AS bill_amount,                                            --    Total bill amount per customer
-           COUNT() AS total_bills,                                                      --    Total number of bills per customer
-           SUM(CASE WHEN ct.transaction_date <= due_date THEN 1 ELSE 0 END) AS on_time_payments    --    Count of on-time payments per customer
+           SUM(b.bill_amount) AS bill_amount,
+           COUNT(*) AS total_bills,
+           SUM(CASE WHEN ct.transaction_date <= due_date THEN 1 ELSE 0 END) AS on_time_payments
     FROM all_bills b
-    INNER JOIN customer_transactions ct ON b.bill_id = ct.loan_bill_id                    --    Join bills with transactions on bill ID
+    INNER JOIN customer_transactions ct ON b.bill_id = ct.loan_bill_id
     GROUP BY b.customer_id
 )
 SELECT c.customer_id,
        ROUND(
-           (ot.on_time_payments  1.0 / ot.total_bills)  70 +                         --    Weight on-time payment ratio by 70%
+           (ot.on_time_payments * 1.0 / ot.total_bills) * 70 +
            (CASE
-                WHEN ot.bill_amount  1.0 / c.credit_limit < 0.3 THEN 1               --    High score if bill amount < 30% of credit limit
-                WHEN ot.bill_amount  1.0 / c.credit_limit < 0.5 THEN 0.7             --    Medium score if bill amount < 50% of credit limit
-                ELSE 0.5                                                            --    Low score otherwise
-            END)  30, 1
-       ) AS cibil_score                                                                --    Calculate final cibil score rounded to 1 decimal place
+                WHEN ot.bill_amount * 1.0 / c.credit_limit < 0.3 THEN 1
+                WHEN ot.bill_amount * 1.0 / c.credit_limit < 0.5 THEN 0.7
+                ELSE 0.5
+            END) * 30, 1
+       ) AS cibil_score
 FROM customers c
-INNER JOIN on_time_calc ot ON c.customer_id = ot.customer_id                          --    Join customers with calculated payment info
-ORDER BY c.customer_id ASC;                                                            --    Order results by customer_id ascending`,
+INNER JOIN on_time_calc ot ON c.customer_id = ot.customer_id
+ORDER BY c.customer_id ASC;`,
     starterCode: `-- CIBIL Score\n-- Write your solution here\nSELECT *\nFROM customers;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Credit scoring models assess borrower risk by weighing payment history (70%) and credit utilization (30%). Banks use these scores for loan approvals, interest rate determination, and risk-based pricing. Accurate scoring reduces default rates and improves portfolio quality.`,
+    optimizationTips: [
+      "UNION ALL combines loans and bills into a unified dataset for on-time calculation",
+      "Multiply by 1.0 before division to force floating-point arithmetic in PostgreSQL",
+      "CASE-based utilization buckets provide stepped scoring (1, 0.7, 0.5)",
+      "Indexes on customer_id across all tables for efficient multi-table joins"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Customer with no transactions \u2014 not in results due to INNER JOIN",
+      "All payments on time \u2014 on_time_payments = total_bills, ratio = 1.0",
+      "Credit limit of 0 \u2014 division by zero in utilization calculation",
+      "Bill paid on exact due date \u2014 counts as on-time (<=)",
+      "Customer with only loans and no credit card bills"
     ]
   },
 
@@ -2041,30 +2538,44 @@ CREATE TABLE customer_orders (
   order_date DATE,
   order_amount INT
 );
+
+INSERT INTO customer_orders VALUES
+(1, 101, '2024-01-01', 500),
+(2, 102, '2024-01-01', 300),
+(3, 101, '2024-01-02', 200),
+(4, 103, '2024-01-02', 400),
+(5, 102, '2024-01-03', 600),
+(6, 104, '2024-01-03', 150),
+(7, 101, '2024-01-03', 350),
+(8, 105, '2024-01-04', 800);
 `,
     mySolution: null,
-    systemSolution: `WITH first_order_date AS (  
-    SELECT customer_id, MIN(order_date) AS first_order      -- Get the first order date per customer
-    FROM customer_orders  
-    GROUP BY customer_id  
-)  
-SELECT co.order_date  
-    , SUM(CASE WHEN co.order_date = fod.first_order THEN 1 ELSE 0 END) AS new_customers     -- Count new customers placing their first order on this date
-    , SUM(CASE WHEN co.order_date > fod.first_order THEN 1 ELSE 0 END) AS repeat_customers  -- Count repeat customers ordering after their first order date
-FROM customer_orders co  
-INNER JOIN first_order_date fod ON co.customer_id = fod.customer_id  
-GROUP BY co.order_date     -- Group by each order date
-ORDER BY order_date 
-
-ASC;     -- Order results by order_date ascending`,
+    systemSolution: `WITH first_order_date AS (
+    SELECT customer_id, MIN(order_date) AS first_order
+    FROM customer_orders
+    GROUP BY customer_id
+)
+SELECT co.order_date,
+    SUM(CASE WHEN co.order_date = fod.first_order THEN 1 ELSE 0 END) AS new_customers,
+    SUM(CASE WHEN co.order_date > fod.first_order THEN 1 ELSE 0 END) AS repeat_customers
+FROM customer_orders co
+INNER JOIN first_order_date fod ON co.customer_id = fod.customer_id
+GROUP BY co.order_date
+ORDER BY order_date ASC;`,
     starterCode: `-- New and Repeat Customers\n-- Write your solution here\nSELECT *\nFROM customer_orders;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Daily new vs repeat customer metrics are fundamental for e-commerce platforms to measure customer acquisition effectiveness, retention rates, and lifetime value trends. This data drives marketing budget allocation between acquisition and retention campaigns.`,
+    optimizationTips: [
+      "CTE with MIN(order_date) pre-computes first order for each customer",
+      "CASE WHEN with SUM creates pivot-style aggregation in one pass",
+      "Index on (customer_id, order_date) for efficient grouping and joining",
+      "Could add a third metric: total orders per day for context"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Customer with multiple orders on their first day \u2014 counted as new for each order",
+      "Customer ordering only once \u2014 appears as new, never as repeat",
+      "No orders on a specific date \u2014 date won't appear in results",
+      "Same customer ordering multiple times on the same day after first day",
+      "NULL order_date values"
     ]
   },
 
@@ -2083,8 +2594,8 @@ You are given the login and logout timings of all the employees for a given week
         name: "employees",
         columns: [
           { name: "emp_id", type: "int" },
-          { name: "login", type: "datetime" },
-          { name: "logout", type: "datetime" }
+          { name: "login", type: "timestamp" },
+          { name: "logout", type: "timestamp" }
         ]
       }
     ],
@@ -2092,36 +2603,63 @@ You are given the login and logout timings of all the employees for a given week
 
 CREATE TABLE employees (
   emp_id INT,
-  login DATETIME,
-  logout DATETIME
+  login TIMESTAMP,
+  logout TIMESTAMP
 );
+
+INSERT INTO employees VALUES
+(1, '2024-01-01 08:00:00', '2024-01-01 17:00:00'),
+(1, '2024-01-02 07:30:00', '2024-01-02 18:00:00'),
+(1, '2024-01-03 08:00:00', '2024-01-03 19:30:00'),
+(1, '2024-01-04 09:00:00', '2024-01-04 18:00:00'),
+(2, '2024-01-01 08:00:00', '2024-01-01 19:00:00'),
+(2, '2024-01-02 07:00:00', '2024-01-02 18:30:00'),
+(2, '2024-01-03 08:00:00', '2024-01-03 16:00:00'),
+(3, '2024-01-01 09:00:00', '2024-01-01 17:00:00'),
+(3, '2024-01-02 09:00:00', '2024-01-02 17:00:00');
 `,
     mySolution: null,
-    systemSolution: `with logged_hours as (
-select ,TIMESTAMPDIFF(second, login, logout)/3600.0,case when TIMESTAMPDIFF(second, login, logout) / 3600.0  > 10 then '10+'
-when TIMESTAMPDIFF(second, login, logout) / 3600.0  > 8 then '8+'
-else '8-' end as time_window
-from employees)
- , time_window as (
- select emp_id , count() as days_8
-, sum(case when time_window='10+' then 1 else 0 end ) as days_10
- from logged_hours
-where time_window in ('10+','8+')
- group by emp_id)
- select emp_id, case when days_8 >=3 and days_10>=2 then 'both'
- when days_8 >=3 then '1'
- else '2' end as criterian
- from time_window
-  where days_8>=3 or days_10>=2 
+    systemSolution: `WITH logged_hours AS (
+SELECT *,
+  EXTRACT(EPOCH FROM (logout - login)) / 3600.0 AS hours_worked,
+  CASE
+    WHEN EXTRACT(EPOCH FROM (logout - login)) / 3600.0 > 10 THEN '10+'
+    WHEN EXTRACT(EPOCH FROM (logout - login)) / 3600.0 > 8 THEN '8+'
+    ELSE '8-'
+  END AS time_window
+FROM employees
+),
+time_window AS (
+  SELECT emp_id,
+    COUNT(*) AS days_8,
+    SUM(CASE WHEN time_window = '10+' THEN 1 ELSE 0 END) AS days_10
+  FROM logged_hours
+  WHERE time_window IN ('10+', '8+')
+  GROUP BY emp_id
+)
+SELECT emp_id,
+  CASE
+    WHEN days_8 >= 3 AND days_10 >= 2 THEN 'both'
+    WHEN days_8 >= 3 THEN '1'
+    ELSE '2'
+  END AS criterion
+FROM time_window
+WHERE days_8 >= 3 OR days_10 >= 2
 ORDER BY emp_id ASC;`,
     starterCode: `-- Workaholics Employees\n-- Write your solution here\nSELECT *\nFROM employees;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Identifying employees with excessive working hours helps HR ensure labor law compliance, prevent burnout, and implement wellness programs. This analysis can flag potential overtime cost issues and help managers redistribute workload more effectively.`,
+    optimizationTips: [
+      "EXTRACT(EPOCH FROM interval) / 3600 converts to hours in PostgreSQL (replaces MySQL's TIMESTAMPDIFF)",
+      "Categorizing into time windows first simplifies the counting logic",
+      "WHERE filter on time_window reduces unnecessary aggregation of normal-hour days",
+      "Multiple criteria with CASE WHEN avoids separate queries for each criterion"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Employee working exactly 8 or 10 hours \u2014 strict > means not counted",
+      "Login and logout on different days (overnight shift)",
+      "NULL login or logout values",
+      "Employee with exactly 3 days of 8+ hours but also 2 of those are 10+ \u2014 should be 'both'",
+      "Employee with multiple login/logout pairs on the same day"
     ]
   },
 
@@ -2151,14 +2689,13 @@ For each lift find the comma separated list of people who can be accomodated. Th
         ]
       }
     ],
-    sampleData: `DROP TABLE IF EXISTS lifts;
+    sampleData: `DROP TABLE IF EXISTS lift_passengers;
+DROP TABLE IF EXISTS lifts;
 
 CREATE TABLE lifts (
   capacity_kg INT,
   id INT
 );
-
-DROP TABLE IF EXISTS lift_passengers;
 
 CREATE TABLE lift_passengers (
   passenger_name VARCHAR(10),
@@ -2166,27 +2703,51 @@ CREATE TABLE lift_passengers (
   gender VARCHAR(1),
   lift_id INT
 );
+
+INSERT INTO lifts VALUES (200, 1), (300, 2);
+
+INSERT INTO lift_passengers VALUES
+('Alice', 55, 'F', 1),
+('Bob', 80, 'M', 1),
+('Carol', 60, 'F', 1),
+('Dave', 90, 'M', 1),
+('Eve', 50, 'F', 2),
+('Frank', 85, 'M', 2),
+('Grace', 65, 'F', 2),
+('Henry', 70, 'M', 2),
+('Ivy', 45, 'F', 2);
 `,
     mySolution: null,
-    systemSolution: `with running_weight as (
-select l.id , lp.passenger_name ,lp.weight_kg,l.capacity_kg,lp.gender
-, sum(lp.weight_kg) over(partition by l.id order by case when lp.gender='F' then 0 else 1 end, lp.weight_kg rows between unbounded preceding and current row) as running_sum
-from lifts l
-inner join lift_passengers lp on l.id=lp.lift_id
+    systemSolution: `WITH running_weight AS (
+SELECT l.id, lp.passenger_name, lp.weight_kg, l.capacity_kg, lp.gender,
+  SUM(lp.weight_kg) OVER(
+    PARTITION BY l.id
+    ORDER BY CASE WHEN lp.gender = 'F' THEN 0 ELSE 1 END, lp.weight_kg
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+  ) AS running_sum
+FROM lifts l
+INNER JOIN lift_passengers lp ON l.id = lp.lift_id
 )
-select id, GROUP_CONCAT(passenger_name ORDER BY gender,weight_kg SEPARATOR',') as passenger_list
-from running_weight
-where running_sum < capacity_kg
-group by id
+SELECT id,
+  STRING_AGG(passenger_name, ',' ORDER BY CASE WHEN gender = 'F' THEN 0 ELSE 1 END, weight_kg) AS passenger_list
+FROM running_weight
+WHERE running_sum <= capacity_kg
+GROUP BY id
 ORDER BY id;`,
     starterCode: `-- Lift Overloaded (Part 2)\n-- Write your solution here\nSELECT *\nFROM lifts;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Capacity-constrained resource allocation with priority ordering models real-world scenarios like elevator management, vehicle loading, and batch processing. The gender-priority ordering demonstrates how business rules can be incorporated into SQL optimization problems.`,
+    optimizationTips: [
+      "STRING_AGG replaces MySQL's GROUP_CONCAT with SEPARATOR syntax in PostgreSQL",
+      "Running SUM with window function tracks cumulative weight without self-join",
+      "CASE in ORDER BY implements female-first priority sorting",
+      "WHERE running_sum <= capacity_kg filters passengers that exceed capacity"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Lift where single heaviest female exceeds capacity",
+      "All passengers are same gender \u2014 ordering falls back to weight only",
+      "Lift with exact capacity match \u2014 <= includes boundary",
+      "Empty lift (no passengers assigned)",
+      "Multiple passengers with identical weight and gender"
     ]
   },
 
@@ -2215,36 +2776,57 @@ CREATE TABLE orders (
   product_id VARCHAR(5),
   sales INT
 );
+
+INSERT INTO orders VALUES
+('202301', 'P001', 100),
+('202301', 'P002', 150),
+('202302', 'P001', 120),
+('202302', 'P002', 130),
+('202303', 'P001', 250),
+('202303', 'P002', 200),
+('202304', 'P001', 180),
+('202304', 'P002', 400),
+('202305', 'P001', 300),
+('202305', 'P002', 350);
 `,
-    mySolution: `with cte as(
-select order_month,product_id,sum(sales) as total_sales
-from orders
-group by order_month,product_id)
-,cte1 as (select ,
-sum(total_sales) over(partition by product_id order by order_month,total_sales rows between 2 preceding and 1 preceding) as ttl_sales
-from cte)
-select order_month,product_id
-from cte1 
-where total_sales>ttl_sales and
-order_month>'202302'
-order by order_month`,
-    systemSolution: `with cte as (
-select  
-,sum(sales) over(partition by product_id order by order_month rows between 2 preceding and 1 preceding) as last2
-,row_number() over(partition by product_id order by order_month) as rn
-from orders 
+    mySolution: `WITH cte AS (
+SELECT order_month, product_id, SUM(sales) AS total_sales
+FROM orders
+GROUP BY order_month, product_id
+),
+cte1 AS (
+SELECT *,
+  SUM(total_sales) OVER(PARTITION BY product_id ORDER BY order_month ROWS BETWEEN 2 PRECEDING AND 1 PRECEDING) AS ttl_sales
+FROM cte
 )
-select order_month,product_id from cte 
-where rn>=3 and sales > last2
-ORDER BY order_month,product_id ASC;`,
+SELECT order_month, product_id
+FROM cte1
+WHERE total_sales > ttl_sales AND order_month > '202302'
+ORDER BY order_month`,
+    systemSolution: `WITH cte AS (
+SELECT *,
+  SUM(sales) OVER(PARTITION BY product_id ORDER BY order_month ROWS BETWEEN 2 PRECEDING AND 1 PRECEDING) AS last2,
+  ROW_NUMBER() OVER(PARTITION BY product_id ORDER BY order_month) AS rn
+FROM orders
+)
+SELECT order_month, product_id
+FROM cte
+WHERE rn >= 3 AND sales > last2
+ORDER BY order_month, product_id ASC;`,
     starterCode: `-- Trending Products\n-- Write your solution here\nSELECT *\nFROM orders;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Identifying trending products helps Amazon optimize inventory allocation, adjust pricing strategies, and feature products in promotional campaigns. Products with accelerating sales velocity may indicate emerging trends or successful marketing campaigns.`,
+    optimizationTips: [
+      "Window function with ROWS BETWEEN efficiently computes rolling sum of previous 2 months",
+      "ROW_NUMBER filters out first 2 months where comparison is meaningless",
+      "Partition by product_id ensures each product's trend is tracked independently",
+      "Index on (product_id, order_month) for efficient window function computation"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Product with no sales in one of the previous months \u2014 NULL in rolling sum",
+      "Product with identical sales each month \u2014 never trending",
+      "First two months of data \u2014 excluded from results",
+      "Multiple products trending in the same month",
+      "Product with sales in non-consecutive months"
     ]
   },
 
@@ -2277,35 +2859,51 @@ CREATE TABLE drivers (
   end_loc VARCHAR(1),
   end_time TIME
 );
-`,
-    mySolution: `with cte as(select ,
-lead(start_time) over(partition by id order by start_time) as prev_time,
-lead(start_loc) over(partition by id order by start_time) as prev_loc
-from drivers)
 
-select  id,count() as total_rides ,
-sum(case when end_time=prev_time and end_loc=prev_loc then 1 else 0 end) as profit_rides
-from cte
-group by id`,
-    systemSolution: `with cte as (
-select  
-, lag(end_time,1) over(partition by id order by start_time) as prev_end_time
-, lag(end_loc,1) over(partition by id order by start_time) as prev_end_loc
-from drivers
+INSERT INTO drivers VALUES
+('D1', 'A', '08:00', 'B', '08:30'),
+('D1', 'B', '08:30', 'C', '09:00'),
+('D1', 'C', '09:00', 'D', '09:30'),
+('D1', 'E', '10:00', 'F', '10:30'),
+('D2', 'A', '08:00', 'B', '08:30'),
+('D2', 'C', '09:00', 'D', '09:30'),
+('D2', 'D', '09:30', 'E', '10:00');
+`,
+    mySolution: `WITH cte AS (
+SELECT *,
+  LEAD(start_time) OVER(PARTITION BY id ORDER BY start_time) AS next_start_time,
+  LEAD(start_loc) OVER(PARTITION BY id ORDER BY start_time) AS next_start_loc
+FROM drivers
 )
-select id, count() as total_rides , 
-sum(case when start_time = prev_end_time and start_loc=prev_end_loc then 1 else 0 end) as profit_rides
-from cte 
-group by id
+SELECT id, COUNT(*) AS total_rides,
+  SUM(CASE WHEN end_time = next_start_time AND end_loc = next_start_loc THEN 1 ELSE 0 END) AS profit_rides
+FROM cte
+GROUP BY id`,
+    systemSolution: `WITH cte AS (
+SELECT *,
+  LAG(end_time, 1) OVER(PARTITION BY id ORDER BY start_time) AS prev_end_time,
+  LAG(end_loc, 1) OVER(PARTITION BY id ORDER BY start_time) AS prev_end_loc
+FROM drivers
+)
+SELECT id, COUNT(*) AS total_rides,
+  SUM(CASE WHEN start_time = prev_end_time AND start_loc = prev_end_loc THEN 1 ELSE 0 END) AS profit_rides
+FROM cte
+GROUP BY id
 ORDER BY id ASC;`,
     starterCode: `-- Uber Profit Rides\n-- Write your solution here\nSELECT *\nFROM drivers;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Profit rides (back-to-back rides with no repositioning) indicate driver efficiency and demand density. This metric helps Uber optimize driver routing algorithms, identify high-demand corridors, and adjust surge pricing zones.`,
+    optimizationTips: [
+      "LAG and LEAD are interchangeable approaches \u2014 both capture consecutive ride transitions",
+      "Partition by driver ID, ordered by start time ensures correct ride sequence",
+      "CASE WHEN inside SUM creates a conditional count in one pass",
+      "Index on (id, start_time) for efficient window function computation"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Driver with only one ride \u2014 no profit ride possible",
+      "Same end/start location but different times \u2014 not a profit ride",
+      "Three consecutive profit rides \u2014 each pair counts separately",
+      "NULL start or end locations",
+      "Rides spanning midnight (time wraps around)"
     ]
   },
 
@@ -2318,32 +2916,59 @@ ORDER BY id ASC;`,
     problem: `Product recommendation. Just the basic type (“customers who bought this also bought…”). That, in its simplest form, is an outcome of basket analysis. Write a SQL to find the product pairs which have been purchased together in same order along with the purchase frequency (count of times they have been purchased together). Based on this data Amazon can recommend frequently bought together products to other users.
 
 Order the output by purchase frequency in descending order. Please make in the output first product column has id greater than second product column.`,
-    schema: [],
-    sampleData: ``,
-    mySolution: `select o.product_id,o1.product_id,count() as purchase_frequency
-from orders o
-cross join orders o1
-on o.order_id=o1.order_id and  o.product_id >o1.product_id
-group by o.product_id,o1.product_id
-order by purchase_frequency desc`,
-    systemSolution: `SELECT 
+    schema: [
+      {
+        name: "orders",
+        columns: [
+          { name: "order_id", type: "int" },
+          { name: "product_id", type: "int" }
+        ]
+      }
+    ],
+    sampleData: `DROP TABLE IF EXISTS orders;
+
+CREATE TABLE orders (
+  order_id INT,
+  product_id INT
+);
+
+INSERT INTO orders VALUES
+(1, 101), (1, 102), (1, 103),
+(2, 101), (2, 102),
+(3, 102), (3, 103), (3, 104),
+(4, 101), (4, 103),
+(5, 102), (5, 104);
+`,
+    mySolution: `SELECT o.product_id, o1.product_id, COUNT(*) AS purchase_frequency
+FROM orders o
+INNER JOIN orders o1
+  ON o.order_id = o1.order_id AND o.product_id > o1.product_id
+GROUP BY o.product_id, o1.product_id
+ORDER BY purchase_frequency DESC`,
+    systemSolution: `SELECT
     o1.product_id AS product_1,
     o2.product_id AS product_2,
-    COUNT() AS purchase_frequency
+    COUNT(*) AS purchase_frequency
 FROM orders o1
 INNER JOIN orders o2
     ON o1.order_id = o2.order_id
 WHERE o1.product_id > o2.product_id
 GROUP BY o1.product_id, o2.product_id
 ORDER BY purchase_frequency DESC;`,
-    starterCode: `-- Product Recommendation\n-- Write your solution here\nSELECT 1;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    starterCode: `-- Product Recommendation\n-- Write your solution here\nSELECT *\nFROM orders;`,
+    businessImpact: `Market basket analysis identifies frequently co-purchased products, powering 'frequently bought together' recommendations. This drives cross-selling revenue, optimizes product bundling strategies, and improves inventory co-location in warehouses.`,
+    optimizationTips: [
+      "Self-join on order_id with product_id inequality avoids duplicate pairs",
+      "WHERE clause (not ON) is clearer for the inequality filter",
+      "product_1 > product_2 ensures consistent ordering of pairs",
+      "Index on (order_id, product_id) for efficient self-join"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Order with single product \u2014 no pairs generated",
+      "Same product ordered multiple times in one order",
+      "Product pair purchased only once \u2014 low confidence recommendation",
+      "Very popular product appearing in most orders \u2014 high pair frequency but may not be meaningful",
+      "No overlapping products between orders"
     ]
   },
 
@@ -2386,45 +3011,65 @@ CREATE TABLE orders (
   delivery_date DATE,
   cancel_date DATE
 );
+
+INSERT INTO orders VALUES
+(1, '2024-01-05', 101, '2024-01-10', NULL),
+(2, '2024-01-08', 102, NULL, '2024-01-09'),
+(3, '2024-01-12', 103, '2024-01-15', '2024-01-18'),
+(4, '2024-01-20', 104, '2024-01-25', NULL),
+(5, '2024-02-01', 105, NULL, '2024-02-03'),
+(6, '2024-02-05', 106, '2024-02-08', '2024-02-10'),
+(7, '2024-02-10', 107, '2024-02-14', NULL),
+(8, '2024-02-15', 108, '2024-02-18', NULL);
 `,
-    mySolution: `with combined as (select
+    mySolution: `WITH combined AS (
+SELECT
   EXTRACT(YEAR FROM order_date) AS order_year,
-        EXTRACT(MONTH FROM order_date) AS order_month,
-case 
-	when cancel_date is not null and delivery_date is null 		then 1 else 0 end as cancel_flag,
-case 
-	when cancel_date is not null and
-	cancel_date >delivery_date then 1 else 0 end as	return_flag
-from orders
-where order_date is not null)
-select order_year,order_month,
-	round(sum(cancel_flag)/nullif(count()-sum(return_flag),0)100,2) as cancellation_rate,
-	round(sum(return_flag)/nullif(count()-sum(cancel_flag),0)100,2) as return_rate
-from combined
-group by order_year,order_month
-order by order_year, order_month ;`,
-    systemSolution: `with cte as (
-select year(order_date) as order_year
-,month(order_date) as order_month,order_id
-,case when delivery_date is null and cancel_date is not null 
-then 1 else 0 end as cancel_flag 
-,case when delivery_date is not null and cancel_date is not null then 1 else 0 end as return_flag 
-from orders
+  EXTRACT(MONTH FROM order_date) AS order_month,
+  CASE
+    WHEN cancel_date IS NOT NULL AND delivery_date IS NULL THEN 1 ELSE 0
+  END AS cancel_flag,
+  CASE
+    WHEN cancel_date IS NOT NULL AND cancel_date > delivery_date THEN 1 ELSE 0
+  END AS return_flag
+FROM orders
+WHERE order_date IS NOT NULL
 )
-select order_year,order_month
-,round(sum(cancel_flag)100.0/(count()-sum(return_flag)),2)  as cancellation_rate
-,round(sum(return_flag)100.0/(count()-sum(cancel_flag)),2) as return_rate
-from cte
-group by order_year,order_month
-order by order_year,order_month;`,
+SELECT order_year, order_month,
+  ROUND(SUM(cancel_flag) * 100.0 / NULLIF(COUNT(*) - SUM(return_flag), 0), 2) AS cancellation_rate,
+  ROUND(SUM(return_flag) * 100.0 / NULLIF(COUNT(*) - SUM(cancel_flag), 0), 2) AS return_rate
+FROM combined
+GROUP BY order_year, order_month
+ORDER BY order_year, order_month;`,
+    systemSolution: `WITH cte AS (
+SELECT EXTRACT(YEAR FROM order_date) AS order_year,
+  EXTRACT(MONTH FROM order_date) AS order_month, order_id,
+  CASE WHEN delivery_date IS NULL AND cancel_date IS NOT NULL
+    THEN 1 ELSE 0 END AS cancel_flag,
+  CASE WHEN delivery_date IS NOT NULL AND cancel_date IS NOT NULL
+    THEN 1 ELSE 0 END AS return_flag
+FROM orders
+)
+SELECT order_year, order_month,
+  ROUND(SUM(cancel_flag) * 100.0 / (COUNT(*) - SUM(return_flag)), 2) AS cancellation_rate,
+  ROUND(SUM(return_flag) * 100.0 / (COUNT(*) - SUM(cancel_flag)), 2) AS return_rate
+FROM cte
+GROUP BY order_year, order_month
+ORDER BY order_year, order_month;`,
     starterCode: `-- Cancellation vs Return\n-- Write your solution here\nSELECT *\nFROM orders;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Separating cancellation rates from return rates helps e-commerce platforms identify distinct operational issues: high cancellation suggests pricing/inventory problems, while high returns indicate product quality or listing accuracy issues. Monthly trends reveal seasonality and the impact of policy changes.`,
+    optimizationTips: [
+      "EXTRACT(YEAR/MONTH FROM) replaces MySQL's YEAR()/MONTH() in PostgreSQL",
+      "NULLIF prevents division by zero when denominator could be 0",
+      "Separate cancel and return flags enable independent rate calculations",
+      "Index on order_date for efficient month-based grouping"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Order with both delivery_date and cancel_date NULL \u2014 neither cancelled nor returned",
+      "Cancel date before delivery date \u2014 cancelled before delivery",
+      "Month with all orders cancelled \u2014 denominator for cancellation rate is 0",
+      "No cancellations or returns in a month \u2014 both rates are 0",
+      "Order cancelled and delivered on same date"
     ]
   },
 
@@ -2457,50 +3102,67 @@ CREATE TABLE icc_world_cup (
   team_2 VARCHAR(10),
   winner VARCHAR(10)
 );
+
+INSERT INTO icc_world_cup VALUES
+('India', 'SL', 'India'),
+('SL', 'Aus', 'Aus'),
+('SA', 'Eng', 'Eng'),
+('Eng', 'NZ', 'NZ'),
+('Aus', 'India', 'India'),
+('India', 'SA', 'Draw'),
+('SL', 'Eng', 'SL');
 `,
-    mySolution: `with Combined_flag as(select team_1,
-case when team_1=winner then 1 else 0 end as winner_flag,
-case when winner='Draw' then 1 else 0 end as draw_flag
-from icc_world_cup
-union all
-select team_2,
-case when team_2=winner then 1 else 0 end as winner_flag,
-case when winner='Draw' then 1 else 0 end as draw_flag
-from icc_world_cup)
-select team_1 as team_name,
-count() as match_played,
-sum(winner_flag) as no_of_wins,
-count()-sum(winner_flag)-sum(draw_flag) as no_of_losses,
-sum(winner_flag)2+ sum(draw_flag) as total_points 
-from Combined_flag
-group by team_1
-order by team_name ;`,
-    systemSolution: `with cte as (
-select team_1 as team_name
-, case when team_1=winner then 1 else 0 end as win_flag
-, case when winner='Draw' then 1 else 0 end as draw_flag
-from icc_world_cup 
-union all
-select team_2 as team_name
-, case when team_2=winner then 1 else 0 end as win_flag
-, case when winner='Draw' then 1 else 0 end as draw_flag
-from icc_world_cup 
+    mySolution: `WITH combined_flag AS (
+SELECT team_1,
+  CASE WHEN team_1 = winner THEN 1 ELSE 0 END AS winner_flag,
+  CASE WHEN winner = 'Draw' THEN 1 ELSE 0 END AS draw_flag
+FROM icc_world_cup
+UNION ALL
+SELECT team_2,
+  CASE WHEN team_2 = winner THEN 1 ELSE 0 END AS winner_flag,
+  CASE WHEN winner = 'Draw' THEN 1 ELSE 0 END AS draw_flag
+FROM icc_world_cup
 )
-select team_name,count() as match_played
-,sum(win_flag) as no_of_wins
-,count()-sum(win_flag)-sum(draw_flag) as no_of_losses
-,2sum(win_flag)+sum(draw_flag) as total_points
-from cte
-group by team_name
-ORDER BY team_name ;`,
+SELECT team_1 AS team_name,
+  COUNT(*) AS match_played,
+  SUM(winner_flag) AS no_of_wins,
+  COUNT(*) - SUM(winner_flag) - SUM(draw_flag) AS no_of_losses,
+  SUM(winner_flag) * 2 + SUM(draw_flag) AS total_points
+FROM combined_flag
+GROUP BY team_1
+ORDER BY team_name;`,
+    systemSolution: `WITH cte AS (
+SELECT team_1 AS team_name,
+  CASE WHEN team_1 = winner THEN 1 ELSE 0 END AS win_flag,
+  CASE WHEN winner = 'Draw' THEN 1 ELSE 0 END AS draw_flag
+FROM icc_world_cup
+UNION ALL
+SELECT team_2 AS team_name,
+  CASE WHEN team_2 = winner THEN 1 ELSE 0 END AS win_flag,
+  CASE WHEN winner = 'Draw' THEN 1 ELSE 0 END AS draw_flag
+FROM icc_world_cup
+)
+SELECT team_name, COUNT(*) AS match_played,
+  SUM(win_flag) AS no_of_wins,
+  COUNT(*) - SUM(win_flag) - SUM(draw_flag) AS no_of_losses,
+  2 * SUM(win_flag) + SUM(draw_flag) AS total_points
+FROM cte
+GROUP BY team_name
+ORDER BY team_name;`,
     starterCode: `-- Points Table\n-- Write your solution here\nSELECT *\nFROM icc_world_cup;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Tournament points table derivation from match results is a classic UNION ALL + aggregation pattern. It normalizes asymmetric match data (team_1 vs team_2) into a per-team view, applicable to any sports league, gaming leaderboard, or competitive ranking system.`,
+    optimizationTips: [
+      "UNION ALL unpivots team_1 and team_2 into a single team column for aggregation",
+      "CASE WHEN flags computed inline avoid multiple passes over the data",
+      "Losses computed as total - wins - draws avoids a third flag",
+      "Points formula: 2*wins + draws computed in one expression"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "All matches drawn \u2014 every team has equal points",
+      "Team plays itself (invalid data) \u2014 would double-count",
+      "Winner value doesn't match either team (invalid data)",
+      "Team with zero wins and zero draws \u2014 all losses",
+      "Single match in tournament"
     ]
   },
 
@@ -2522,7 +3184,7 @@ Write an SQL to measure the time spent by each employee inside the office betwee
         columns: [
           { name: "emp_id", type: "int" },
           { name: "action", type: "varchar(3)" },
-          { name: "created_at", type: "datetime" }
+          { name: "created_at", type: "timestamp" }
         ]
       }
     ],
@@ -2531,47 +3193,73 @@ Write an SQL to measure the time spent by each employee inside the office betwee
 CREATE TABLE employee_record (
   emp_id INT,
   action VARCHAR(3),
-  created_at DATETIME
+  created_at TIMESTAMP
 );
+
+INSERT INTO employee_record VALUES
+(1, 'in', '2019-04-01 09:00:00'),
+(1, 'out', '2019-04-01 17:00:00'),
+(1, 'in', '2019-04-01 18:00:00'),
+(1, 'out', '2019-04-02 06:00:00'),
+(2, 'in', '2019-04-01 12:00:00'),
+(2, 'out', '2019-04-01 23:00:00'),
+(2, 'in', '2019-04-02 08:00:00'),
+(2, 'out', '2019-04-02 12:00:00'),
+(3, 'in', '2019-04-01 10:00:00'),
+(3, 'out', '2019-04-01 15:00:00');
 `,
-    mySolution: `with cte as(select ,
-lead(created_at) over(partition by emp_id order by created_at  ) as out_time
-from employee_record)
-,created_window as (select emp_id,
-case when created_at <= '2019-04-01 14:00:00' then '2019-04-01 14:00:00' else created_at  end as final_in_time,
- case when out_time > '2019-04-02 10:00:00' then '2019-04-02 10:00:00' else out_time  end as final_out_time
-from cte
-where action='in')
-select emp_id,
-sum(case when final_in_time>final_out_time then 0 else
-timestampdiff(minute,final_in_time,final_out_time)end) as time_spent_in_mins
-from created_window
-group by emp_id`,
-    systemSolution: `with cte as (
-select 
-, lead(created_at) over(partition by emp_id order by created_at) as next_created_at
- from employee_record
- ),
- considered_time as (
- select emp_id
- , case when created_at < '2019-04-01 14:00:00' then '2019-04-01 14:00:00' else created_at end as in_time
- , case when next_created_at > '2019-04-02 10:00:00' then '2019-04-02 10:00:00' else next_created_at end as out_time
- from cte
- where action='in'
- )
-select emp_id 
-, ROUND(sum(case when in_time>=out_time then 0 else TIMESTAMPDIFF(minute,in_time,out_time) end) , 1 ) as time_spent_in_mins
-from considered_time
-group by emp_id
+    mySolution: `WITH cte AS (
+SELECT *,
+  LEAD(created_at) OVER(PARTITION BY emp_id ORDER BY created_at) AS out_time
+FROM employee_record
+),
+created_window AS (
+SELECT emp_id,
+  CASE WHEN created_at <= '2019-04-01 14:00:00'::TIMESTAMP THEN '2019-04-01 14:00:00'::TIMESTAMP ELSE created_at END AS final_in_time,
+  CASE WHEN out_time > '2019-04-02 10:00:00'::TIMESTAMP THEN '2019-04-02 10:00:00'::TIMESTAMP ELSE out_time END AS final_out_time
+FROM cte
+WHERE action = 'in'
+)
+SELECT emp_id,
+  SUM(CASE WHEN final_in_time > final_out_time THEN 0
+    ELSE EXTRACT(EPOCH FROM (final_out_time - final_in_time)) / 60
+  END) AS time_spent_in_mins
+FROM created_window
+GROUP BY emp_id
+ORDER BY emp_id`,
+    systemSolution: `WITH cte AS (
+SELECT *,
+  LEAD(created_at) OVER(PARTITION BY emp_id ORDER BY created_at) AS next_created_at
+FROM employee_record
+),
+considered_time AS (
+SELECT emp_id,
+  CASE WHEN created_at < '2019-04-01 14:00:00'::TIMESTAMP THEN '2019-04-01 14:00:00'::TIMESTAMP ELSE created_at END AS in_time,
+  CASE WHEN next_created_at > '2019-04-02 10:00:00'::TIMESTAMP THEN '2019-04-02 10:00:00'::TIMESTAMP ELSE next_created_at END AS out_time
+FROM cte
+WHERE action = 'in'
+)
+SELECT emp_id,
+  ROUND(SUM(CASE WHEN in_time >= out_time THEN 0
+    ELSE EXTRACT(EPOCH FROM (out_time - in_time)) / 60
+  END), 1) AS time_spent_in_mins
+FROM considered_time
+GROUP BY emp_id
 ORDER BY emp_id;`,
     starterCode: `-- Employees Inside Office (Part 2)\n-- Write your solution here\nSELECT *\nFROM employee_record;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Time-windowed employee attendance tracking between specific timestamps requires clipping in/out times to the observation window. This pattern applies broadly to billing calculations, resource utilization during maintenance windows, and shift-overlap analysis.`,
+    optimizationTips: [
+      "EXTRACT(EPOCH FROM interval) / 60 converts to minutes in PostgreSQL (replaces TIMESTAMPDIFF)",
+      "LEAD pairs each 'in' with the next 'out' chronologically",
+      "CASE clipping to window boundaries handles sessions spanning the observation period",
+      "Filter action='in' ensures only in-out pairs are measured"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Employee enters before the window starts \u2014 clip in_time to window start",
+      "Employee exits after the window ends \u2014 clip out_time to window end",
+      "Employee entirely outside the window \u2014 in_time > out_time, returns 0",
+      "Employee works across midnight within the window",
+      "Multiple in/out cycles within the window for same employee"
     ]
   },
 
@@ -2589,38 +3277,60 @@ ORDER BY emp_id;`,
           { name: "post_id", type: "int" },
           { name: "user_id", type: "int" }
         ]
+      },
+      {
+        name: "user_follows",
+        columns: [
+          { name: "user_id", type: "int" },
+          { name: "follows_user_id", type: "int" }
+        ]
       }
     ],
     sampleData: `DROP TABLE IF EXISTS post_likes;
+DROP TABLE IF EXISTS user_follows;
 
 CREATE TABLE post_likes (
   post_id INT,
   user_id INT
 );
+
+CREATE TABLE user_follows (
+  user_id INT,
+  follows_user_id INT
+);
+
+INSERT INTO post_likes VALUES
+(1, 101), (1, 102), (2, 101),
+(2, 103), (3, 102), (3, 103),
+(4, 101), (4, 104), (5, 102);
+
+INSERT INTO user_follows VALUES
+(201, 101), (201, 102),
+(202, 103), (202, 101),
+(203, 104);
 `,
     mySolution: `WITH followed_likes AS (
-    SELECT 
+    SELECT
         u.user_id,
         p.post_id,
-        COUNT() AS like_count
+        COUNT(*) AS like_count
     FROM user_follows u
-    INNER JOIN post_likes p 
+    INNER JOIN post_likes p
         ON u.follows_user_id = p.user_id
     GROUP BY u.user_id, p.post_id
-)
-,
+),
 ranked AS (
-    SELECT 
+    SELECT
         fl.user_id,
         fl.post_id,
         fl.like_count,
         ROW_NUMBER() OVER (
-            PARTITION BY fl.user_id 
+            PARTITION BY fl.user_id
             ORDER BY fl.like_count DESC, fl.post_id
         ) AS rn
     FROM followed_likes fl
     LEFT JOIN post_likes my_likes
-        ON fl.user_id = my_likes.user_id 
+        ON fl.user_id = my_likes.user_id
         AND fl.post_id = my_likes.post_id
     WHERE my_likes.post_id IS NULL
 )
@@ -2628,29 +3338,35 @@ SELECT user_id, post_id, like_count
 FROM ranked
 WHERE rn = 1
 ORDER BY user_id;`,
-    systemSolution: `with cte as (
-select f.user_id,p.post_id,count() as no_of_likes
-from user_follows f 
-inner join post_likes p on f.follows_user_id = p.user_id 
-group by f.user_id,p.post_id
+    systemSolution: `WITH cte AS (
+SELECT f.user_id, p.post_id, COUNT(*) AS no_of_likes
+FROM user_follows f
+INNER JOIN post_likes p ON f.follows_user_id = p.user_id
+GROUP BY f.user_id, p.post_id
 )
-select user_id,post_id,no_of_likes from (
-select cte. 
-,row_number() over(partition by cte.user_id order by no_of_likes desc, cte.post_id ) as rn
-from cte
-left join post_likes p on p.user_id=cte.user_id and p.post_id=cte.post_id
-where p.post_id is null
+SELECT user_id, post_id, no_of_likes FROM (
+SELECT cte.*,
+  ROW_NUMBER() OVER(PARTITION BY cte.user_id ORDER BY no_of_likes DESC, cte.post_id) AS rn
+FROM cte
+LEFT JOIN post_likes p ON p.user_id = cte.user_id AND p.post_id = cte.post_id
+WHERE p.post_id IS NULL
 ) s
-where rn=1
+WHERE rn = 1
 ORDER BY user_id;`,
     starterCode: `-- LinkedIn Recommendation\n-- Write your solution here\nSELECT *\nFROM post_likes;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Social media feed recommendation based on network activity \u2014 recommending posts liked by people you follow, excluding posts you've already liked. This collaborative filtering approach drives engagement by surfacing relevant content from a user's social graph.`,
+    optimizationTips: [
+      "JOIN between user_follows and post_likes identifies posts liked by followed users",
+      "LEFT JOIN with IS NULL exclusion filters out already-liked posts",
+      "ROW_NUMBER with like_count DESC picks the most-liked unread post per user",
+      "Index on (user_id, post_id) in both tables for efficient joins"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "User follows nobody \u2014 no recommendations",
+      "User has already liked all posts from followed users",
+      "Multiple posts with same like count \u2014 secondary sort by post_id breaks tie",
+      "User follows someone who hasn't liked any posts",
+      "Circular follows (A follows B, B follows A)"
     ]
   },
 
@@ -2667,7 +3383,7 @@ A user can visit the dashboard multiple times within a day. However, to be count
         name: "dashboard_visit",
         columns: [
           { name: "user_id", type: "varchar(10)" },
-          { name: "visit_time", type: "datetime" }
+          { name: "visit_time", type: "timestamp" }
         ]
       }
     ],
@@ -2675,38 +3391,56 @@ A user can visit the dashboard multiple times within a day. However, to be count
 
 CREATE TABLE dashboard_visit (
   user_id VARCHAR(10),
-  visit_time DATETIME
+  visit_time TIMESTAMP
 );
+
+INSERT INTO dashboard_visit VALUES
+('U1', '2024-01-01 08:00:00'),
+('U1', '2024-01-01 08:30:00'),
+('U1', '2024-01-01 10:00:00'),
+('U1', '2024-01-02 09:00:00'),
+('U2', '2024-01-01 12:00:00'),
+('U2', '2024-01-01 12:45:00'),
+('U2', '2024-01-01 14:00:00'),
+('U3', '2024-01-01 10:00:00');
 `,
     mySolution: null,
     systemSolution: `WITH previous_visits AS (
-    SELECT 
+    SELECT
         user_id,
         visit_time,
         LAG(visit_time) OVER (PARTITION BY user_id ORDER BY visit_time) AS previous_visit_time
-    FROM
-        dashboard_visit
+    FROM dashboard_visit
+),
+visit_flag AS (
+SELECT user_id, previous_visit_time, visit_time,
+  CASE
+    WHEN previous_visit_time IS NULL THEN 1
+    WHEN EXTRACT(EPOCH FROM (visit_time - previous_visit_time)) / 3600 > 1 THEN 1
+    ELSE 0
+  END AS new_visit_flag
+FROM previous_visits
 )
-, vigit_flag as (
-select user_id, previous_visit_time,visit_time
-, CASE WHEN previous_visit_time IS NULL THEN 1
-      WHEN TIMESTAMPDIFF(second, previous_visit_time, visit_time) / 3600 > 1 THEN 1
-            ELSE 0
-        END AS new_visit_flag
-from previous_visits
-)
-select user_id, sum(new_visit_flag) as no_of_visits, count(distinct CAST(visit_time as DATE)) as visit_days
-from vigit_flag
-group by user_id
+SELECT user_id,
+  SUM(new_visit_flag) AS no_of_visits,
+  COUNT(DISTINCT CAST(visit_time AS DATE)) AS visit_days
+FROM visit_flag
+GROUP BY user_id
 ORDER BY user_id ASC;`,
     starterCode: `-- Dashboard Visits\n-- Write your solution here\nSELECT *\nFROM dashboard_visit;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Session-based visit counting (merging events within 60 minutes) provides more accurate engagement metrics than raw page views. This pattern is standard in web analytics and helps distinguish true user sessions from rapid refreshes or multi-tab browsing.`,
+    optimizationTips: [
+      "LAG identifies the previous visit time for gap calculation",
+      "EXTRACT(EPOCH FROM interval) / 3600 converts to hours in PostgreSQL",
+      "First visit per user (NULL previous) automatically starts a new session",
+      "CAST(visit_time AS DATE) with COUNT(DISTINCT) gives unique visit days"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "User with exactly 60-minute gap \u2014 not > 1 hour, so same session",
+      "User with single visit \u2014 1 visit, 1 visit day",
+      "Multiple visits on different days within 60 minutes of midnight",
+      "NULL visit_time values",
+      "Visits spanning midnight \u2014 gap calculation still works on timestamps"
     ]
   },
 
@@ -2733,41 +3467,65 @@ CREATE TABLE Transactions (
   amount INT,
   transaction_date DATE
 );
+
+INSERT INTO Transactions VALUES
+(1000, '2020-01-06'),
+(-200, '2020-01-14'),
+(-50, '2020-01-25'),
+(400, '2020-02-10'),
+(-100, '2020-02-15'),
+(-80, '2020-02-28'),
+(300, '2020-03-05'),
+(-150, '2020-03-20'),
+(-60, '2020-04-01'),
+(500, '2020-06-15');
 `,
-    mySolution: `with cte as(select 
-month(transaction_date) as mnt,
-sum(case when amount <0  then amount else 0 end) as card_payment,
-count(case when amount <0  then 1  end) as cnt_card_payment,
-sum(case when amount >0 then amount else 0 end) as incoming_transfer
- from transactions
-group by month(transaction_date))
-,cte1 as (select 
-case when card_payment<=-100 and cnt_card_payment>=2 then 0 else -5 end + card_payment+incoming_transfer as total
-from cte)
-select sum(total)+-5(12-(Select count(distinct mnt) from cte)) as final_balance
-from cte1`,
-    systemSolution: `with cte as (
-select month(transaction_date)  as tran_month ,amount
- from transactions
+    mySolution: `WITH cte AS (
+SELECT
+  EXTRACT(MONTH FROM transaction_date) AS mnt,
+  SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) AS card_payment,
+  COUNT(CASE WHEN amount < 0 THEN 1 END) AS cnt_card_payment,
+  SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) AS incoming_transfer
+FROM transactions
+GROUP BY EXTRACT(MONTH FROM transaction_date)
+),
+cte1 AS (
+SELECT
+  CASE WHEN card_payment <= -100 AND cnt_card_payment >= 2 THEN 0 ELSE -5 END + card_payment + incoming_transfer AS total
+FROM cte
 )
-,cte2 as (
-select tran_month
-, sum(amount) as net_amount , sum(case when amount<0 then -1amount else 0 end) as credit_card_amount
-, sum(case when amount<0 then 1 else 0 end) as credit_card_transact_cnt
-from cte 
-group by tran_month
+SELECT SUM(total) + -5 * (12 - (SELECT COUNT(DISTINCT mnt) FROM cte)) AS final_balance
+FROM cte1`,
+    systemSolution: `WITH cte AS (
+SELECT EXTRACT(MONTH FROM transaction_date) AS tran_month, amount
+FROM transactions
+),
+cte2 AS (
+SELECT tran_month,
+  SUM(amount) AS net_amount,
+  SUM(CASE WHEN amount < 0 THEN -1 * amount ELSE 0 END) AS credit_card_amount,
+  SUM(CASE WHEN amount < 0 THEN 1 ELSE 0 END) AS credit_card_transact_cnt
+FROM cte
+GROUP BY tran_month
 )
-select sum(net_amount) - sum(case when credit_card_amount >=100 and credit_card_transact_cnt >=2 then 0 else 5 end)
-- 5(12-(select count(distinct tran_month) from cte)) as final_balance
-from cte2;`,
+SELECT SUM(net_amount)
+  - SUM(CASE WHEN credit_card_amount >= 100 AND credit_card_transact_cnt >= 2 THEN 0 ELSE 5 END)
+  - 5 * (12 - (SELECT COUNT(DISTINCT tran_month) FROM cte)) AS final_balance
+FROM cte2;`,
     starterCode: `-- Final Account Balance\n-- Write your solution here\nSELECT *\nFROM Transactions;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Banking fee calculation with conditional waiver rules requires month-by-month aggregation and business logic application. This pattern is common in financial systems where fees are waived based on activity thresholds, loyalty tiers, or minimum balance requirements.`,
+    optimizationTips: [
+      "EXTRACT(MONTH FROM) replaces MySQL's MONTH() in PostgreSQL",
+      "Negative amounts for credit card payments enables simple sign-based classification",
+      "Months with no transactions still incur the $5 fee \u2014 handled by 12 - COUNT(DISTINCT month)",
+      "CASE WHEN for fee waiver check: >= 2 payments AND >= $100 total"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Month with no transactions \u2014 fee still applies ($5)",
+      "Month with exactly 2 payments totaling exactly $100 \u2014 fee waived",
+      "Month with 1 large payment > $100 \u2014 fee NOT waived (need >= 2 payments)",
+      "All 12 months have qualifying transactions \u2014 no additional fees",
+      "Transaction amount of exactly 0"
     ]
   },
 
@@ -2797,59 +3555,78 @@ Write an SQL to get date when each customer became prime member, last service us
         ]
       }
     ],
-    sampleData: `DROP TABLE IF EXISTS users;
+    sampleData: `DROP TABLE IF EXISTS events;
+DROP TABLE IF EXISTS users;
 
 CREATE TABLE users (
   name VARCHAR(15),
   user_id INT
 );
 
-DROP TABLE IF EXISTS events;
-
 CREATE TABLE events (
   user_id INT,
   type VARCHAR(15),
   access_date DATE
 );
-`,
-    mySolution: `with cte as(select ,
-lag(type,1) over(partition by user_id order by access_date) prev_service,
-lag(access_date,1) over(partition by user_id order by access_date) as prev_date,
-row_number() over(partition by user_id order by access_date desc) as rn
-from events
-)
 
-select u.name as user_name,
-c.access_date as prime_member_date,
-coalesce(c.prev_service,c1.type) as last_access_service,
-coalesce(c.prev_date,c1.access_date) as last_access_service_date
-from users u
-left join cte c
-on u.user_id=c.user_id and c.type='prime'
-left join cte c1
-on u.user_id=c1.user_id and c1.rn=1
-order by last_access_service_date`,
-    systemSolution: `WITH cte as (
-select 
-, lag(type,1) over(partition by user_id order by access_date) as prev_type
-, lag(access_date,1) over(partition by user_id order by access_date) as prev_access_date
-,row_number() over(partition by user_id order by access_date desc) as rn
-from events
+INSERT INTO users VALUES
+('Alice', 1), ('Bob', 2), ('Carol', 3);
+
+INSERT INTO events VALUES
+(1, 'Video', '2024-01-01'),
+(1, 'Music', '2024-01-05'),
+(1, 'Prime', '2024-01-10'),
+(2, 'Pay', '2024-01-02'),
+(2, 'Video', '2024-01-08'),
+(2, 'Music', '2024-01-15'),
+(3, 'Video', '2024-01-03'),
+(3, 'Music', '2024-01-07'),
+(3, 'Prime', '2024-01-12');
+`,
+    mySolution: `WITH cte AS (
+SELECT *,
+  LAG(type, 1) OVER(PARTITION BY user_id ORDER BY access_date) AS prev_service,
+  LAG(access_date, 1) OVER(PARTITION BY user_id ORDER BY access_date) AS prev_date,
+  ROW_NUMBER() OVER(PARTITION BY user_id ORDER BY access_date DESC) AS rn
+FROM events
 )
-select u.name as user_name 
-, cte.access_date as prime_member_date , coalesce(cte.prev_type,c.type) as last_access_service, coalesce(cte.prev_access_date,c.access_date) as last_access_service_date
-from users u
-left join cte on u.user_id=cte.user_id and cte.type='Prime'
-left join cte c on c.user_id=u.user_id and c.rn=1
+SELECT u.name AS user_name,
+  c.access_date AS prime_member_date,
+  COALESCE(c.prev_service, c1.type) AS last_access_service,
+  COALESCE(c.prev_date, c1.access_date) AS last_access_service_date
+FROM users u
+LEFT JOIN cte c ON u.user_id = c.user_id AND c.type = 'Prime'
+LEFT JOIN cte c1 ON u.user_id = c1.user_id AND c1.rn = 1
+ORDER BY last_access_service_date`,
+    systemSolution: `WITH cte AS (
+SELECT *,
+  LAG(type, 1) OVER(PARTITION BY user_id ORDER BY access_date) AS prev_type,
+  LAG(access_date, 1) OVER(PARTITION BY user_id ORDER BY access_date) AS prev_access_date,
+  ROW_NUMBER() OVER(PARTITION BY user_id ORDER BY access_date DESC) AS rn
+FROM events
+)
+SELECT u.name AS user_name,
+  cte.access_date AS prime_member_date,
+  COALESCE(cte.prev_type, c.type) AS last_access_service,
+  COALESCE(cte.prev_access_date, c.access_date) AS last_access_service_date
+FROM users u
+LEFT JOIN cte ON u.user_id = cte.user_id AND cte.type = 'Prime'
+LEFT JOIN cte c ON c.user_id = u.user_id AND c.rn = 1
 ORDER BY last_access_service_date;`,
     starterCode: `-- Prime Subscription\n-- Write your solution here\nSELECT *\nFROM users;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Funnel analysis identifying which service was the last touchpoint before Prime conversion helps Amazon optimize its upselling strategy. For non-Prime users, the last accessed service indicates the best channel for targeted Prime promotions.`,
+    optimizationTips: [
+      "LAG gets the previous service/date before Prime conversion event",
+      "ROW_NUMBER DESC gets the most recent event for non-Prime users",
+      "COALESCE falls back to the most recent event when user isn't Prime",
+      "Double LEFT JOIN handles both Prime and non-Prime users in one query"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "User with Prime as their first event \u2014 no previous service (NULL)",
+      "User who never becomes Prime \u2014 prime_member_date is NULL",
+      "User with no events at all \u2014 all fields NULL",
+      "Case sensitivity: 'prime' vs 'Prime' \u2014 check data consistency",
+      "User with multiple Prime events (re-subscription)"
     ]
   },
 
@@ -2877,51 +3654,64 @@ Please consider that an employee name can be in one of the 3 following formats.
 
 CREATE TABLE employee (
   employeeid INT,
-  fullname VARCHAR(20)
+  fullname VARCHAR(40)
 );
+
+INSERT INTO employee VALUES
+(1, 'Smith,John Michael'),
+(2, 'Doe,Jane'),
+(3, 'Alice'),
+(4, 'Johnson,Bob William'),
+(5, 'Brown,Mary');
 `,
-    mySolution: `with cte as (
-select ,instr(fullname,',') as comma_position 
-,instr(fullname,' ') as space_position
-from employee
+    mySolution: `WITH cte AS (
+SELECT *, POSITION(',' IN fullname) AS comma_position,
+  POSITION(' ' IN fullname) AS space_position
+FROM employee
 )
-select fullname
-, case when comma_position=0 then fullname
-when space_position>0 then substr(fullname,comma_position+1,space_position-comma_position-1)
-else substr(fullname,comma_position+1,length(fullname)-comma_position)
-end as first_name
-,case when space_position=0 then null
-else substr(fullname,space_position+1,length(fullname)-space_position)
-end as middle_name
-,case when comma_position=0 then null
-else substr(fullname,1,comma_position-1)
-end as last_name
-from cte;`,
-    systemSolution: `with cte as (
-select ,instr(fullname,',') as comma_position 
-,instr(fullname,' ') as space_position
-from employee
+SELECT fullname,
+  CASE WHEN comma_position = 0 THEN fullname
+    WHEN space_position > 0 THEN SUBSTR(fullname, comma_position + 1, space_position - comma_position - 1)
+    ELSE SUBSTR(fullname, comma_position + 1, LENGTH(fullname) - comma_position)
+  END AS first_name,
+  CASE WHEN space_position = 0 THEN NULL
+    ELSE SUBSTR(fullname, space_position + 1, LENGTH(fullname) - space_position)
+  END AS middle_name,
+  CASE WHEN comma_position = 0 THEN NULL
+    ELSE SUBSTR(fullname, 1, comma_position - 1)
+  END AS last_name
+FROM cte;`,
+    systemSolution: `WITH cte AS (
+SELECT *, POSITION(',' IN fullname) AS comma_position,
+  POSITION(' ' IN fullname) AS space_position
+FROM employee
 )
-select fullname
-, case when comma_position=0 then fullname
-when space_position>0 then substr(fullname,comma_position+1,space_position-comma_position-1)
-else substr(fullname,comma_position+1,length(fullname)-comma_position)
-end as first_name
-,case when space_position=0 then null
-else substr(fullname,space_position+1,length(fullname)-space_position)
-end as middle_name
-,case when comma_position=0 then null
-else substr(fullname,1,comma_position-1)
-end as last_name
-from cte;`,
+SELECT fullname,
+  CASE WHEN comma_position = 0 THEN fullname
+    WHEN space_position > 0 THEN SUBSTR(fullname, comma_position + 1, space_position - comma_position - 1)
+    ELSE SUBSTR(fullname, comma_position + 1, LENGTH(fullname) - comma_position)
+  END AS first_name,
+  CASE WHEN space_position = 0 THEN NULL
+    ELSE SUBSTR(fullname, space_position + 1, LENGTH(fullname) - space_position)
+  END AS middle_name,
+  CASE WHEN comma_position = 0 THEN NULL
+    ELSE SUBSTR(fullname, 1, comma_position - 1)
+  END AS last_name
+FROM cte;`,
     starterCode: `-- Employee Name\n-- Write your solution here\nSELECT *\nFROM employee;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Name parsing from combined full name fields is a common data cleansing task. Proper first/middle/last name separation enables personalized communications, duplicate detection, and integration with external systems that require structured name fields.`,
+    optimizationTips: [
+      "POSITION() replaces MySQL's INSTR() in PostgreSQL",
+      "SUBSTR with computed offsets handles variable-length name parts",
+      "CASE WHEN handles three different name formats cleanly",
+      "CTE computes delimiter positions once, reused in multiple CASE expressions"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Name with only first name (no comma, no space)",
+      "Name with first and last but no middle name",
+      "Name with all three parts",
+      "NULL or empty fullname values",
+      "Names with multiple spaces or special characters"
     ]
   },
 
@@ -2938,8 +3728,8 @@ from cte;`,
         columns: [
           { name: "rider_id", type: "int" },
           { name: "order_id", type: "int" },
-          { name: "pickup_time", type: "datetime" },
-          { name: "delivery_time", type: "datetime" }
+          { name: "pickup_time", type: "timestamp" },
+          { name: "delivery_time", type: "timestamp" }
         ]
       }
     ],
@@ -2948,62 +3738,76 @@ from cte;`,
 CREATE TABLE orders (
   rider_id INT,
   order_id INT,
-  pickup_time DATETIME,
-  delivery_time DATETIME
+  pickup_time TIMESTAMP,
+  delivery_time TIMESTAMP
 );
+
+INSERT INTO orders VALUES
+(1, 101, '2024-01-01 10:00:00', '2024-01-01 10:30:00'),
+(1, 102, '2024-01-01 11:00:00', '2024-01-01 11:45:00'),
+(1, 103, '2024-01-01 22:00:00', '2024-01-02 00:30:00'),
+(2, 104, '2024-01-01 09:00:00', '2024-01-01 09:20:00'),
+(2, 105, '2024-01-01 14:00:00', '2024-01-01 14:50:00'),
+(2, 106, '2024-01-01 23:00:00', '2024-01-02 01:00:00');
 `,
-    mySolution: `with cte as(
-select rider_id,pickup_time,
-timestampdiff(minute,pickup_time,delivery_time) as ride_time_mins
-from orders
-where date(pickup_time)=date(delivery_time)
-union all
-select rider_id,pickup_time,
-timestampdiff(minute,pickup_time,cast((delivery_time) as date )) as ride_time_mins
-from orders
-where date(pickup_time)!=date(delivery_time)
-union all
-select rider_id,delivery_time,
-timestampdiff(minute,cast((delivery_time) as date ),delivery_time) as ride_time_mins
-from orders
-where date(pickup_time)!=date(delivery_time))
-select rider_id,
-cast(pickup_time as date) as ride_date,
-sum(ride_time_mins) as ride_time_mins
-from cte
-group by rider_id,cast(pickup_time as date)
-having sum(ride_time_mins) >0
-order by rider_id,ride_date;`,
-    systemSolution: `with cte as 
-(
-select order_id,rider_id,CAST(pickup_time AS DATE) as ride_date
-,TIMESTAMPDIFF(MINUTE, pickup_time,delivery_time) as ride_time
- from orders
- where CAST(pickup_time AS DATE)=CAST(delivery_time AS DATE)
-union all
-select order_id,rider_id, CAST(pickup_time AS DATE) as ride_date
-,TIMESTAMPDIFF(MINUTE, pickup_time,CAST(delivery_time as DATE)) as ride_time
- from orders
-where CAST(pickup_time AS DATE)!=CAST(delivery_time AS DATE)
-union all
-select order_id,rider_id, CAST(delivery_time AS DATE) as ride_date
-,TIMESTAMPDIFF(MINUTE,CAST(delivery_time as DATE), delivery_time) as ride_time
- from orders
-where CAST(pickup_time AS DATE)!=CAST(delivery_time AS DATE)
+    mySolution: `WITH cte AS (
+SELECT rider_id, pickup_time,
+  EXTRACT(EPOCH FROM (delivery_time - pickup_time)) / 60 AS ride_time_mins
+FROM orders
+WHERE CAST(pickup_time AS DATE) = CAST(delivery_time AS DATE)
+UNION ALL
+SELECT rider_id, pickup_time,
+  EXTRACT(EPOCH FROM (CAST(delivery_time AS DATE) - pickup_time)) / 60 AS ride_time_mins
+FROM orders
+WHERE CAST(pickup_time AS DATE) != CAST(delivery_time AS DATE)
+UNION ALL
+SELECT rider_id, delivery_time,
+  EXTRACT(EPOCH FROM (delivery_time - CAST(delivery_time AS DATE))) / 60 AS ride_time_mins
+FROM orders
+WHERE CAST(pickup_time AS DATE) != CAST(delivery_time AS DATE)
 )
-select rider_id,ride_date,sum(ride_time) as ride_time_mins
- from cte
-where ride_time!=0
-group by rider_id,ride_date
-order by rider_id,ride_date;`,
+SELECT rider_id,
+  CAST(pickup_time AS DATE) AS ride_date,
+  SUM(ride_time_mins) AS ride_time_mins
+FROM cte
+GROUP BY rider_id, CAST(pickup_time AS DATE)
+HAVING SUM(ride_time_mins) > 0
+ORDER BY rider_id, ride_date;`,
+    systemSolution: `WITH cte AS (
+SELECT order_id, rider_id, CAST(pickup_time AS DATE) AS ride_date,
+  EXTRACT(EPOCH FROM (delivery_time - pickup_time)) / 60 AS ride_time
+FROM orders
+WHERE CAST(pickup_time AS DATE) = CAST(delivery_time AS DATE)
+UNION ALL
+SELECT order_id, rider_id, CAST(pickup_time AS DATE) AS ride_date,
+  EXTRACT(EPOCH FROM (CAST(delivery_time AS DATE) - pickup_time)) / 60 AS ride_time
+FROM orders
+WHERE CAST(pickup_time AS DATE) != CAST(delivery_time AS DATE)
+UNION ALL
+SELECT order_id, rider_id, CAST(delivery_time AS DATE) AS ride_date,
+  EXTRACT(EPOCH FROM (delivery_time - CAST(delivery_time AS DATE))) / 60 AS ride_time
+FROM orders
+WHERE CAST(pickup_time AS DATE) != CAST(delivery_time AS DATE)
+)
+SELECT rider_id, ride_date, SUM(ride_time) AS ride_time_mins
+FROM cte
+WHERE ride_time != 0
+GROUP BY rider_id, ride_date
+ORDER BY rider_id, ride_date;`,
     starterCode: `-- Rider Ride Time\n-- Write your solution here\nSELECT *\nFROM orders;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Splitting delivery time across calendar days is essential for accurate daily rider performance tracking. Deliveries spanning midnight need to be attributed proportionally to each day for fair compensation, shift scheduling, and operational analytics.`,
+    optimizationTips: [
+      "EXTRACT(EPOCH FROM interval) / 60 replaces TIMESTAMPDIFF(MINUTE) in PostgreSQL",
+      "CAST(timestamp AS DATE) replaces MySQL's DATE() function",
+      "UNION ALL splits cross-day deliveries into per-day segments",
+      "HAVING > 0 or WHERE ride_time != 0 removes zero-minute segments"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Delivery spanning midnight \u2014 split into two day records",
+      "Same pickup and delivery day \u2014 single record",
+      "Delivery spanning multiple days \u2014 needs additional UNION ALL logic",
+      "Very short delivery (< 1 minute)",
+      "NULL pickup_time or delivery_time"
     ]
   },
 
@@ -3022,7 +3826,7 @@ Each notification is sent for a particular product id but a customer may purchas
         name: "notifications",
         columns: [
           { name: "notification_id", type: "int" },
-          { name: "delivered_at", type: "datetime" },
+          { name: "delivered_at", type: "timestamp" },
           { name: "product_id", type: "varchar(2)" }
         ]
       },
@@ -3030,78 +3834,102 @@ Each notification is sent for a particular product id but a customer may purchas
         name: "purchases",
         columns: [
           { name: "product_id", type: "varchar(2)" },
-          { name: "purchase_timestamp", type: "datetime" },
+          { name: "purchase_timestamp", type: "timestamp" },
           { name: "user_id", type: "int" }
         ]
       }
     ],
-    sampleData: `DROP TABLE IF EXISTS notifications;
+    sampleData: `DROP TABLE IF EXISTS purchases;
+DROP TABLE IF EXISTS notifications;
 
 CREATE TABLE notifications (
   notification_id INT,
-  delivered_at DATETIME,
+  delivered_at TIMESTAMP,
   product_id VARCHAR(2)
 );
 
-DROP TABLE IF EXISTS purchases;
-
 CREATE TABLE purchases (
   product_id VARCHAR(2),
-  purchase_timestamp DATETIME,
+  purchase_timestamp TIMESTAMP,
   user_id INT
 );
+
+INSERT INTO notifications VALUES
+(1, '2024-01-01 10:00:00', 'P1'),
+(2, '2024-01-01 11:30:00', 'P2'),
+(3, '2024-01-01 14:00:00', 'P1');
+
+INSERT INTO purchases VALUES
+('P1', '2024-01-01 10:30:00', 101),
+('P2', '2024-01-01 10:45:00', 102),
+('P1', '2024-01-01 11:00:00', 103),
+('P2', '2024-01-01 12:00:00', 104),
+('P1', '2024-01-01 14:30:00', 105);
 `,
-    mySolution: `with cte as(select ,
-timestampdiff(minute,delivered_at, lead(delivered_at) over(order by delivered_at )) as next_TIME_DIFF,
-lead(delivered_at) over(order by delivered_at ) as next_notification,
-date_add(delivered_at,interval 2 hour) as next_time,
-timestampdiff(minute,delivered_at, date_add(delivered_at,interval 2 hour)) as next_Two_DIFF
-from notifications)
-,cte1 as (select notification_id,product_id,delivered_at,
-case when next_TIME_DIFF >next_Two_DIFF then next_time
-when next_TIME_DIFF is null then next_time else next_notification end as next_time
-from cte)
-select c1.notification_id,
-sum(case when c1.product_id=p.product_id then 1 else 0 end) as same_product_purchases,
- sum(case when c1.product_id!=p.product_id then 1 else 0 end) as different_product_purchases
-from cte1 c1
-inner join purchases p
-on p.purchase_timestamp>=c1.delivered_at and 
-p.purchase_timestamp <= c1.next_time
-group by c1.notification_id`,
+    mySolution: `WITH cte AS (
+SELECT *,
+  EXTRACT(EPOCH FROM (LEAD(delivered_at) OVER(ORDER BY delivered_at) - delivered_at)) / 60 AS next_time_diff,
+  LEAD(delivered_at) OVER(ORDER BY delivered_at) AS next_notification,
+  delivered_at + INTERVAL '2 hours' AS next_time,
+  120 AS next_two_diff
+FROM notifications
+),
+cte1 AS (
+SELECT notification_id, product_id, delivered_at,
+  CASE
+    WHEN next_time_diff > next_two_diff THEN next_time
+    WHEN next_time_diff IS NULL THEN next_time
+    ELSE next_notification
+  END AS next_time
+FROM cte
+)
+SELECT c1.notification_id,
+  SUM(CASE WHEN c1.product_id = p.product_id THEN 1 ELSE 0 END) AS same_product_purchases,
+  SUM(CASE WHEN c1.product_id != p.product_id THEN 1 ELSE 0 END) AS different_product_purchases
+FROM cte1 c1
+INNER JOIN purchases p
+  ON p.purchase_timestamp >= c1.delivered_at
+  AND p.purchase_timestamp <= c1.next_time
+GROUP BY c1.notification_id`,
     systemSolution: `WITH cte AS (
-    SELECT  
-         ,CASE 
-              WHEN DATE_ADD(delivered_at, INTERVAL 2 HOUR) <= LEAD(delivered_at, 1, '9999-12-31') OVER (ORDER BY notification_id) 
-                  THEN DATE_ADD(delivered_at, INTERVAL 2 HOUR)                            --    Calculate valid notification end time as 2 hours after delivery if earlier than next notification
-              ELSE LEAD(delivered_at, 1, '9999-12-31') OVER (ORDER BY notification_id)   --    Otherwise use next notification's delivered_at timestamp
-          END AS notification_valid_till
+    SELECT *,
+      CASE
+        WHEN delivered_at + INTERVAL '2 hours' <= COALESCE(LEAD(delivered_at, 1) OVER (ORDER BY notification_id), '9999-12-31'::TIMESTAMP)
+          THEN delivered_at + INTERVAL '2 hours'
+        ELSE COALESCE(LEAD(delivered_at, 1) OVER (ORDER BY notification_id), '9999-12-31'::TIMESTAMP)
+      END AS notification_valid_till
     FROM notifications
 ),
 cte2 AS (
-    SELECT 
+    SELECT
         notification_id,
         p.user_id,
         p.product_id AS purchased_product,
         cte.product_id AS notified_product
-    FROM purchases p 
-    INNER JOIN cte ON p.purchase_timestamp BETWEEN delivered_at AND notification_valid_till   --    Join purchases made during notification validity period
+    FROM purchases p
+    INNER JOIN cte ON p.purchase_timestamp BETWEEN delivered_at AND notification_valid_till
 )
-SELECT 
+SELECT
     notification_id,
-    SUM(CASE WHEN purchased_product = notified_product THEN 1 ELSE 0 END) AS same_product_purchases    --    Count purchases of notified product
-   ,SUM(CASE WHEN purchased_product != notified_product THEN 1 ELSE 0 END) AS different_product_purchases --    Count purchases of different products
+    SUM(CASE WHEN purchased_product = notified_product THEN 1 ELSE 0 END) AS same_product_purchases,
+    SUM(CASE WHEN purchased_product != notified_product THEN 1 ELSE 0 END) AS different_product_purchases
 FROM cte2
-GROUP BY notification_id                                                                                --    Aggregate counts per notification
-ORDER BY notification_id;                                                                              --    Order results by notification_id ascending`,
+GROUP BY notification_id
+ORDER BY notification_id;`,
     starterCode: `-- Amazon Notifications\n-- Write your solution here\nSELECT *\nFROM notifications;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Notification attribution analysis measures which push notifications directly drive purchases. By associating purchases within a 2-hour window (or before the next notification), Amazon can calculate notification ROI, optimize send frequency, and personalize product recommendations.`,
+    optimizationTips: [
+      "'delivered_at + INTERVAL 2 hours' replaces MySQL's DATE_ADD in PostgreSQL",
+      "LEAD gets next notification time to cap the attribution window",
+      "LEAST of 2-hour window and next notification prevents double-attribution",
+      "BETWEEN in JOIN condition efficiently filters purchases in the valid window"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Last notification \u2014 no next notification, use 2-hour window only",
+      "Next notification within 2 hours \u2014 use next notification time as cutoff",
+      "Purchase at exact boundary time \u2014 included or excluded?",
+      "No purchases within any notification window \u2014 empty result",
+      "Purchase of different product within window"
     ]
   },
 
@@ -3130,46 +3958,93 @@ Tables: calendar_dim
 +-------------+-----------+
 | cal_date    | date      |
 +-------------+-----------+`,
-    schema: [],
-    sampleData: ``,
-    mySolution: `with cte as (
-select product_id,order_date,sum(amount) as sales
- from orders
-group by product_id,order_date
+    schema: [
+      {
+        name: "orders",
+        columns: [
+          { name: "order_id", type: "int" },
+          { name: "product_id", type: "varchar(5)" },
+          { name: "amount", type: "int" },
+          { name: "order_date", type: "date" }
+        ]
+      },
+      {
+        name: "calendar_dim",
+        columns: [
+          { name: "cal_date", type: "date" }
+        ]
+      }
+    ],
+    sampleData: `DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS calendar_dim;
+
+CREATE TABLE orders (
+  order_id INT,
+  product_id VARCHAR(5),
+  amount INT,
+  order_date DATE
+);
+
+CREATE TABLE calendar_dim (
+  cal_date DATE
+);
+
+INSERT INTO orders VALUES
+(1, 'P001', 100, '2024-01-01'),
+(2, 'P001', 150, '2024-01-03'),
+(3, 'P002', 200, '2024-01-01'),
+(4, 'P001', 80, '2024-01-05'),
+(5, 'P002', 120, '2024-01-04');
+
+INSERT INTO calendar_dim VALUES
+('2024-01-01'), ('2024-01-02'), ('2024-01-03'),
+('2024-01-04'), ('2024-01-05'), ('2024-01-06'),
+('2024-01-07');
+`,
+    mySolution: `WITH cte AS (
+SELECT product_id, order_date, SUM(amount) AS sales
+FROM orders
+GROUP BY product_id, order_date
+),
+all_products_dates AS (
+SELECT DISTINCT product_id, cal_date AS order_date
+FROM cte
+CROSS JOIN calendar_dim
 )
-, all_products_dates as (
-select distinct product_id, cal_date as order_date
-from cte 
-cross join calendar_dim
+SELECT a.product_id, a.order_date, COALESCE(cte.sales, 0) AS sales,
+  SUM(COALESCE(cte.sales, 0)) OVER(PARTITION BY a.product_id ORDER BY a.order_date ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) AS rolling3_sum
+FROM all_products_dates a
+LEFT JOIN cte ON a.product_id = cte.product_id AND a.order_date = cte.order_date
+ORDER BY a.product_id, a.order_date;`,
+    systemSolution: `WITH cte AS (
+SELECT product_id, order_date, SUM(amount) AS sales
+FROM orders
+GROUP BY product_id, order_date
+),
+all_products_dates AS (
+SELECT DISTINCT product_id, cal_date AS order_date
+FROM cte
+CROSS JOIN calendar_dim
 )
-select a.product_id,a.order_date,coalesce(cte.sales,0) as sales
-,sum(coalesce(cte.sales,0)) over(partition by a.product_id order by a.order_date rows between 2 preceding and current row) as rolling3_sum
-from all_products_dates a 
-left join cte on a.product_id=cte.product_id and a.order_date=cte.order_date
-ORDER BY a.product_id , a.order_date;`,
-    systemSolution: `with cte as (
-select product_id,order_date,sum(amount) as sales
- from orders
-group by product_id,order_date
-)
-, all_products_dates as (
-select distinct product_id, cal_date as order_date
-from cte 
-cross join calendar_dim
-)
-select a.product_id,a.order_date,coalesce(cte.sales,0) as sales
-,sum(coalesce(cte.sales,0)) over(partition by a.product_id order by a.order_date rows between 2 preceding and current row) as rolling3_sum
-from all_products_dates a 
-left join cte on a.product_id=cte.product_id and a.order_date=cte.order_date
-ORDER BY a.product_id , a.order_date;`,
-    starterCode: `-- Rolling Sales\n-- Write your solution here\nSELECT 1;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+SELECT a.product_id, a.order_date, COALESCE(cte.sales, 0) AS sales,
+  SUM(COALESCE(cte.sales, 0)) OVER(PARTITION BY a.product_id ORDER BY a.order_date ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) AS rolling3_sum
+FROM all_products_dates a
+LEFT JOIN cte ON a.product_id = cte.product_id AND a.order_date = cte.order_date
+ORDER BY a.product_id, a.order_date;`,
+    starterCode: `-- Rolling Sales\n-- Write your solution here\nSELECT *\nFROM orders;`,
+    businessImpact: `Rolling 3-day sales calculations smooth out daily volatility and reveal short-term trends. Using a calendar table ensures zero-sale days are included, preventing misleading gaps that would distort the rolling window calculation.`,
+    optimizationTips: [
+      "Calendar table CROSS JOIN ensures every date is represented per product",
+      "LEFT JOIN with COALESCE fills missing sales days with 0",
+      "ROWS BETWEEN 2 PRECEDING AND CURRENT ROW gives exact 3-day rolling window",
+      "CTE pre-aggregates daily sales before joining to calendar"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Product with no sales on a given day \u2014 0 in rolling sum",
+      "First day \u2014 rolling sum equals just that day's sales",
+      "Second day \u2014 rolling sum is sum of first two days",
+      "Product appearing only once in the entire month",
+      "Calendar table missing dates \u2014 gaps in rolling calculation"
     ]
   },
 
@@ -3199,33 +4074,51 @@ CREATE TABLE revenue (
   year INT,
   revenue DECIMAL(10,2)
 );
+
+INSERT INTO revenue VALUES
+(1, 2018, 100000.00),
+(1, 2019, 130000.00),
+(1, 2020, 170000.00),
+(1, 2021, 220000.00),
+(2, 2018, 50000.00),
+(2, 2019, 65000.00),
+(2, 2020, 60000.00),
+(3, 2019, 80000.00),
+(3, 2020, 110000.00),
+(3, 2021, 145000.00);
 `,
     mySolution: null,
     systemSolution: `WITH revenue_growth AS (
-    SELECT 
+    SELECT
         company_id,
         year,
         revenue,
-        CASE 
-        WHEN revenue >= 1.25  LAG(revenue,1,0) OVER (PARTITION BY company_id ORDER BY year) THEN 1
-            ELSE 0
+        CASE
+          WHEN revenue >= 1.25 * LAG(revenue, 1, 0) OVER (PARTITION BY company_id ORDER BY year) THEN 1
+          ELSE 0
         END AS revenue_growth_flag
     FROM revenue
 )
-SELECT company_id, sum(revenue) as total_revenue
+SELECT company_id, SUM(revenue) AS total_revenue
 FROM revenue_growth
-where company_id not in
- (select company_id from revenue_growth where revenue_growth_flag=0)
-group by company_id 
+WHERE company_id NOT IN
+  (SELECT company_id FROM revenue_growth WHERE revenue_growth_flag = 0)
+GROUP BY company_id
 ORDER BY company_id;`,
     starterCode: `-- Consistent Growth\n-- Write your solution here\nSELECT *\nFROM revenue;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Identifying companies with consistent 25%+ annual revenue growth filters for hypergrowth candidates in investment analysis. The NOT IN subquery approach elegantly excludes any company that ever failed the growth threshold, ensuring true consistency.`,
+    optimizationTips: [
+      "LAG with default 0 ensures the first year always passes the threshold",
+      "NOT IN subquery with flag=0 filters out companies with any year of sub-threshold growth",
+      "Window function partitioned by company_id compares each year to its predecessor",
+      "SUM(revenue) gives lifetime revenue for qualifying companies"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Company with only one year of data \u2014 always passes (no prior to compare)",
+      "Company with 24.9% growth one year \u2014 fails entire company",
+      "Company with missing year data \u2014 artificial growth spike",
+      "Revenue of 0 in any year \u2014 division by zero if using percentage calculation",
+      "Tie at exactly 25% growth \u2014 included (>= threshold)"
     ]
   },
 
@@ -3256,7 +4149,7 @@ reassigned(0 or 1): Indicates whether the conversation has had interactions by m
           { name: "orderId", type: "varchar(10)" },
           { name: "resolution", type: "varchar(10)" },
           { name: "agentId", type: "int" },
-          { name: "messageSentTime", type: "datetime" },
+          { name: "messageSentTime", type: "timestamp" },
           { name: "cityCode", type: "varchar(6)" }
         ]
       }
@@ -3269,50 +4162,60 @@ CREATE TABLE conversation (
   orderId VARCHAR(10),
   resolution VARCHAR(10),
   agentId INT,
-  messageSentTime DATETIME,
+  messageSentTime TIMESTAMP,
   cityCode VARCHAR(6)
 );
+
+INSERT INTO conversation VALUES
+('Web Agent', 101, 'ORD001', 'False', 1, '2024-01-01 10:00:00', 'NYC'),
+('Android Customer', 101, 'ORD001', 'False', NULL, '2024-01-01 10:05:00', 'NYC'),
+('Web Agent', 101, 'ORD001', 'True', 1, '2024-01-01 10:10:00', 'NYC'),
+('Android Customer', 102, 'ORD002', 'False', NULL, '2024-01-01 11:00:00', 'LAX'),
+('Web Agent', 102, 'ORD002', 'False', 2, '2024-01-01 11:05:00', 'LAX'),
+('Web Agent', 102, 'ORD002', 'False', 3, '2024-01-01 11:15:00', 'LAX');
 `,
     mySolution: `SELECT
-        orderId AS order_id,
-        cityCode AS city_code,
-        MIN(CASE WHEN senderDeviceType = 'Web Agent' THEN messageSentTime END) AS first_agent_message,
-        MIN(CASE WHEN senderDeviceType = 'Android Customer' THEN messageSentTime END) AS first_customer_message,
-        SUM(CASE WHEN senderDeviceType = 'Web Agent' THEN 1 ELSE 0 END) AS num_messages_agent,
-        SUM(CASE WHEN senderDeviceType = 'Android Customer' THEN 1 ELSE 0 END) AS num_messages_customer,
-        CASE WHEN MIN(messageSentTime) = MIN(CASE WHEN senderDeviceType = 'Web Agent' THEN messageSentTime END) THEN 'Agent'
-             WHEN MIN(messageSentTime) = MIN(CASE WHEN senderDeviceType = 'Android Customer' THEN messageSentTime END) THEN 'Customer' END AS first_message_by,
-        MAX(case when resolution='True' then 1 else 0 end) AS resolved,
-        CASE WHEN COUNT(DISTINCT agentId) > 1 THEN 1 ELSE 0 END AS reassigned
-    FROM
-        conversation
-    GROUP BY
-        orderId,cityCode
-    order by orderId;`,
+    orderId AS order_id,
+    cityCode AS city_code,
+    MIN(CASE WHEN senderDeviceType = 'Web Agent' THEN messageSentTime END) AS first_agent_message,
+    MIN(CASE WHEN senderDeviceType = 'Android Customer' THEN messageSentTime END) AS first_customer_message,
+    SUM(CASE WHEN senderDeviceType = 'Web Agent' THEN 1 ELSE 0 END) AS num_messages_agent,
+    SUM(CASE WHEN senderDeviceType = 'Android Customer' THEN 1 ELSE 0 END) AS num_messages_customer,
+    CASE WHEN MIN(messageSentTime) = MIN(CASE WHEN senderDeviceType = 'Web Agent' THEN messageSentTime END) THEN 'Agent'
+         WHEN MIN(messageSentTime) = MIN(CASE WHEN senderDeviceType = 'Android Customer' THEN messageSentTime END) THEN 'Customer' END AS first_message_by,
+    MAX(CASE WHEN resolution = 'True' THEN 1 ELSE 0 END) AS resolved,
+    CASE WHEN COUNT(DISTINCT agentId) > 1 THEN 1 ELSE 0 END AS reassigned
+FROM conversation
+GROUP BY orderId, cityCode
+ORDER BY orderId;`,
     systemSolution: `SELECT
-        orderId AS order_id,
-        cityCode AS city_code,
-        MIN(CASE WHEN senderDeviceType = 'Web Agent' THEN messageSentTime END) AS first_agent_message,
-        MIN(CASE WHEN senderDeviceType = 'Android Customer' THEN messageSentTime END) AS first_customer_message,
-        SUM(CASE WHEN senderDeviceType = 'Web Agent' THEN 1 ELSE 0 END) AS num_messages_agent,
-        SUM(CASE WHEN senderDeviceType = 'Android Customer' THEN 1 ELSE 0 END) AS num_messages_customer,
-        CASE WHEN MIN(messageSentTime) = MIN(CASE WHEN senderDeviceType = 'Web Agent' THEN messageSentTime END) THEN 'Agent'
-             WHEN MIN(messageSentTime) = MIN(CASE WHEN senderDeviceType = 'Android Customer' THEN messageSentTime END) THEN 'Customer' END AS first_message_by,
-        MAX(case when resolution='True' then 1 else 0 end) AS resolved,
-        CASE WHEN COUNT(DISTINCT agentId) > 1 THEN 1 ELSE 0 END AS reassigned
-    FROM
-        conversation
-    GROUP BY
-        orderId,cityCode
-    order by orderId;`,
+    orderId AS order_id,
+    cityCode AS city_code,
+    MIN(CASE WHEN senderDeviceType = 'Web Agent' THEN messageSentTime END) AS first_agent_message,
+    MIN(CASE WHEN senderDeviceType = 'Android Customer' THEN messageSentTime END) AS first_customer_message,
+    SUM(CASE WHEN senderDeviceType = 'Web Agent' THEN 1 ELSE 0 END) AS num_messages_agent,
+    SUM(CASE WHEN senderDeviceType = 'Android Customer' THEN 1 ELSE 0 END) AS num_messages_customer,
+    CASE WHEN MIN(messageSentTime) = MIN(CASE WHEN senderDeviceType = 'Web Agent' THEN messageSentTime END) THEN 'Agent'
+         WHEN MIN(messageSentTime) = MIN(CASE WHEN senderDeviceType = 'Android Customer' THEN messageSentTime END) THEN 'Customer' END AS first_message_by,
+    MAX(CASE WHEN resolution = 'True' THEN 1 ELSE 0 END) AS resolved,
+    CASE WHEN COUNT(DISTINCT agentId) > 1 THEN 1 ELSE 0 END AS reassigned
+FROM conversation
+GROUP BY orderId, cityCode
+ORDER BY orderId;`,
     starterCode: `-- Customer Support Metrics\n-- Write your solution here\nSELECT *\nFROM conversation;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Multi-dimensional customer support metrics from conversation logs provide insights into response times, resolution rates, and agent reassignment patterns. This enables support team optimization, SLA monitoring, and identification of systemic issues affecting customer experience.`,
+    optimizationTips: [
+      "Conditional MIN/SUM with CASE WHEN computes multiple metrics in a single GROUP BY pass",
+      "COUNT(DISTINCT agentId) > 1 efficiently detects reassignment",
+      "MAX(CASE WHEN resolution = 'True' THEN 1) acts as an ANY/EXISTS check per group",
+      "Comparing MIN(messageSentTime) with conditional MINs determines who messaged first"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Order with only agent messages \u2014 first_customer_message is NULL",
+      "Order with only customer messages \u2014 first_agent_message is NULL",
+      "Same timestamp for agent and customer \u2014 first_message_by ambiguous",
+      "NULL agentId values \u2014 excluded from COUNT(DISTINCT)",
+      "Order never resolved \u2014 resolved = 0"
     ]
   },
 
@@ -3333,58 +4236,92 @@ Tables: Competition
 | slice_count      | int         |
 | bet              | int         |
 +------------------+-------------+`,
-    schema: [],
-    sampleData: ``,
-    mySolution: `with ranking as (select  ,
-rank() over(partition by group_id order by slice_count desc ) as rn
-from competition)
-,looser_payout as (select group_id,sum(bet)0.3 as total_losser_bet
-from ranking
-where rn!=1
-group by group_id)
-,winner as(select group_id,count() as no_of_winner
-from ranking
-where rn=1
-and slice_count is not null
-and bet is not null
-group by group_id)
-select r.group_id,r.participant_name,
-round(r.bet+ (l.total_losser_bet/w.no_of_winner),2)  as total_payout
+    schema: [
+      {
+        name: "competition",
+        columns: [
+          { name: "group_id", type: "int" },
+          { name: "participant_name", type: "varchar(10)" },
+          { name: "slice_count", type: "int" },
+          { name: "bet", type: "int" }
+        ]
+      }
+    ],
+    sampleData: `DROP TABLE IF EXISTS competition;
 
-from ranking r
-inner join looser_payout l
-on r.group_id=l.group_id
-inner join winner w
-on r.group_id=w.group_id
-where r.rn=1
-order by r.group_id,r.participant_name`,
-    systemSolution: `with cte as (
-select 
-, rank() over(partition by group_id order by slice_count desc) as rn
-from Competition
+CREATE TABLE competition (
+  group_id INT,
+  participant_name VARCHAR(10),
+  slice_count INT,
+  bet INT
+);
+
+INSERT INTO competition VALUES
+(1, 'Alice', 12, 50),
+(1, 'Bob', 10, 40),
+(1, 'Carol', 8, 30),
+(2, 'Dave', 15, 60),
+(2, 'Eve', 15, 45),
+(2, 'Frank', 9, 35);
+`,
+    mySolution: `WITH ranking AS (
+SELECT *,
+  RANK() OVER(PARTITION BY group_id ORDER BY slice_count DESC) AS rn
+FROM competition
+),
+looser_payout AS (
+SELECT group_id, SUM(bet) * 0.3 AS total_losser_bet
+FROM ranking
+WHERE rn != 1
+GROUP BY group_id
+),
+winner AS (
+SELECT group_id, COUNT(*) AS no_of_winner
+FROM ranking
+WHERE rn = 1
+  AND slice_count IS NOT NULL
+  AND bet IS NOT NULL
+GROUP BY group_id
 )
-, cte2 as 
-(
-select group_id
-,sum(case when rn=1 then 1 else 0 end) as no_of_winners
-,sum(case when rn>1 then bet else 0 end)0.3 as losers_bet 
-from cte 
-group by group_id
+SELECT r.group_id, r.participant_name,
+  ROUND(r.bet + (l.total_losser_bet / w.no_of_winner), 2) AS total_payout
+FROM ranking r
+INNER JOIN looser_payout l ON r.group_id = l.group_id
+INNER JOIN winner w ON r.group_id = w.group_id
+WHERE r.rn = 1
+ORDER BY r.group_id, r.participant_name`,
+    systemSolution: `WITH cte AS (
+SELECT *,
+  RANK() OVER(PARTITION BY group_id ORDER BY slice_count DESC) AS rn
+FROM competition
+),
+cte2 AS (
+SELECT group_id,
+  SUM(CASE WHEN rn = 1 THEN 1 ELSE 0 END) AS no_of_winners,
+  SUM(CASE WHEN rn > 1 THEN bet ELSE 0 END) * 0.3 AS losers_bet
+FROM cte
+GROUP BY group_id
 )
-select cte.group_id,cte.participant_name
-,round(cte.bet+ (cte2.losers_bet)/cte2.no_of_winners,2) as total_payout 
-from cte
-inner join cte2 on cte.group_id=cte2.group_id
-where cte.rn=1
-order by cte.group_id,cte.participant_name;`,
-    starterCode: `-- Eat and Win\n-- Write your solution here\nSELECT 1;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+SELECT cte.group_id, cte.participant_name,
+  ROUND(cte.bet + (cte2.losers_bet) / cte2.no_of_winners, 2) AS total_payout
+FROM cte
+INNER JOIN cte2 ON cte.group_id = cte2.group_id
+WHERE cte.rn = 1
+ORDER BY cte.group_id, cte.participant_name;`,
+    starterCode: `-- Eat and Win\n-- Write your solution here\nSELECT *\nFROM competition;`,
+    businessImpact: `Prize pool distribution with RANK-based winner detection and proportional payout calculation. The 30% loser-bet redistribution with tie-splitting demonstrates a common pattern in gaming, fantasy sports, and betting platform calculations.`,
+    optimizationTips: [
+      "RANK() handles ties correctly \u2014 all tied participants get rank 1",
+      "Separate CTEs for losers' pot and winner count keeps logic clear",
+      "Alternative: single CTE with conditional SUM avoids multiple passes",
+      "ROUND to 2 decimal places for currency precision"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "All participants tie \u2014 no losers, no redistribution pool",
+      "Single participant in group \u2014 wins by default, keeps own bet",
+      "NULL slice_count or bet values \u2014 excluded from winner/loser calculation",
+      "Multiple tied winners \u2014 loser pot split equally",
+      "Group with all same slice_count \u2014 everyone is rank 1"
     ]
   },
 
@@ -3423,14 +4360,14 @@ For each top-selling product in each region, calculate the total quantity sold f
         ]
       }
     ],
-    sampleData: `DROP TABLE IF EXISTS products;
+    sampleData: `DROP TABLE IF EXISTS sales;
+DROP TABLE IF EXISTS seasons;
+DROP TABLE IF EXISTS products;
 
 CREATE TABLE products (
   product_id INT,
   product_name VARCHAR(10)
 );
-
-DROP TABLE IF EXISTS sales;
 
 CREATE TABLE sales (
   sale_id INT,
@@ -3440,75 +4377,87 @@ CREATE TABLE sales (
   quantity_sold INT
 );
 
-DROP TABLE IF EXISTS seasons;
-
 CREATE TABLE seasons (
   start_date DATE,
   end_date DATE,
   season_name VARCHAR(10)
 );
+
+INSERT INTO products VALUES
+(1, 'Widget'), (2, 'Gadget'), (3, 'Gizmo');
+
+INSERT INTO seasons VALUES
+('2023-03-01', '2023-05-31', 'Spring'),
+('2023-06-01', '2023-08-31', 'Summer'),
+('2023-09-01', '2023-11-30', 'Autumn'),
+('2023-12-01', '2024-02-28', 'Winter');
+
+INSERT INTO sales VALUES
+(1, 1, 'East', '2023-03-15', 50),
+(2, 1, 'East', '2023-06-20', 80),
+(3, 2, 'East', '2023-04-10', 30),
+(4, 1, 'West', '2023-07-05', 60),
+(5, 2, 'West', '2023-09-12', 45),
+(6, 3, 'East', '2023-12-01', 70);
 `,
-    mySolution: `with cte as (
-select s.product_id,s.region_name,se.season_name,
-sum(s.quantity_sold) as total_qty
-from sales s
-left join seasons se
-on s.sale_date >=se.start_date 
-and s.sale_date <=se.end_date 
-group by s.product_id,s.region_name,se.season_name)
-,cte1 as (select ,
-rank() over(partition by region_name, season_name order by total_qty desc) as rn 
-from cte)
-Select 
-c1.region_name,p.product_name,
-c1.season_name,
-c1.total_qty as total_quantity_sold
-from cte1 c1
-inner join products p
-on c1.product_id=p.product_id
-where rn=1
-order by region_name
-asc`,
+    mySolution: `WITH cte AS (
+SELECT s.product_id, s.region_name, se.season_name,
+  SUM(s.quantity_sold) AS total_qty
+FROM sales s
+LEFT JOIN seasons se
+  ON s.sale_date >= se.start_date
+  AND s.sale_date <= se.end_date
+GROUP BY s.product_id, s.region_name, se.season_name
+),
+cte1 AS (
+SELECT *,
+  RANK() OVER(PARTITION BY region_name, season_name ORDER BY total_qty DESC) AS rn
+FROM cte
+)
+SELECT
+  c1.region_name, p.product_name,
+  c1.season_name,
+  c1.total_qty AS total_quantity_sold
+FROM cte1 c1
+INNER JOIN products p ON c1.product_id = p.product_id
+WHERE rn = 1
+ORDER BY region_name ASC`,
     systemSolution: `WITH top_selling_per_region AS (
     SELECT
         s.region_name,
         p.product_name,
         SUM(s.quantity_sold) AS total_quantity_sold,
         ROW_NUMBER() OVER(PARTITION BY s.region_name ORDER BY SUM(s.quantity_sold) DESC) AS rn
-    FROM
-        sales s
-    JOIN
-        products p ON s.product_id = p.product_id
-    GROUP BY
-        s.region_name, p.product_name
+    FROM sales s
+    JOIN products p ON s.product_id = p.product_id
+    GROUP BY s.region_name, p.product_name
 )
 SELECT
     ts.region_name,
     ts.product_name,
     ss.season_name,
     SUM(s.quantity_sold) AS total_quantity_sold
-FROM
-    sales s
-JOIN
-    products p ON s.product_id = p.product_id
-JOIN
-    top_selling_per_region ts ON s.region_name = ts.region_name AND p.product_name = ts.product_name
-JOIN
-    seasons ss ON s.sale_date BETWEEN ss.start_date AND ss.end_date
-WHERE
-    ts.rn = 1 -- Select only top-selling product per region
-GROUP BY
-    ts.region_name, ts.product_name, ss.season_name
-ORDER BY
-    ts.region_name, ts.product_name, ss.season_name;`,
+FROM sales s
+JOIN products p ON s.product_id = p.product_id
+JOIN top_selling_per_region ts ON s.region_name = ts.region_name AND p.product_name = ts.product_name
+JOIN seasons ss ON s.sale_date BETWEEN ss.start_date AND ss.end_date
+WHERE ts.rn = 1
+GROUP BY ts.region_name, ts.product_name, ss.season_name
+ORDER BY ts.region_name, ts.product_name, ss.season_name;`,
     starterCode: `-- Seasonal Trends\n-- Write your solution here\nSELECT *\nFROM products;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Seasonal sales analysis for top products per region enables targeted inventory planning, regional marketing campaigns, and demand forecasting. Understanding which products peak in which seasons drives purchasing decisions and promotional scheduling.`,
+    optimizationTips: [
+      "First CTE identifies top product per region, second breaks down by season",
+      "BETWEEN on date ranges maps sales to seasons efficiently",
+      "ROW_NUMBER or RANK determines top product per region",
+      "Index on (product_id, region_name, sale_date) for efficient aggregation"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Product with no sales in certain seasons \u2014 missing from output",
+      "Tied top products in a region \u2014 ROW_NUMBER picks one, RANK picks both",
+      "Sale date falling outside all season ranges \u2014 not counted",
+      "Region with only one product \u2014 automatically top seller",
+      "Seasons with overlapping date ranges"
     ]
   },
 
@@ -3532,32 +4481,37 @@ ORDER BY
 CREATE TABLE logs (
   log_id INT
 );
+
+INSERT INTO logs VALUES
+(1), (2), (3), (5), (6), (8), (10), (11), (12), (13), (20);
 `,
     mySolution: null,
     systemSolution: `WITH numbered_logs AS (
-    SELECT 
+    SELECT
         log_id,
         log_id - ROW_NUMBER() OVER (ORDER BY log_id) AS grp
-    FROM 
-        logs
+    FROM logs
 )
-SELECT 
-    MIN(log_id) AS start_id, 
+SELECT
+    MIN(log_id) AS start_id,
     MAX(log_id) AS end_id
-FROM 
-    numbered_logs
-GROUP BY 
-    grp
-ORDER BY 
-   start_id;`,
+FROM numbered_logs
+GROUP BY grp
+ORDER BY start_id;`,
     starterCode: `-- Contiguous Ranges\n-- Write your solution here\nSELECT *\nFROM logs;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Gap-and-island detection identifies contiguous ranges in sequential data. This pattern is fundamental for log analysis (finding continuous uptime/downtime), seat/resource allocation, missing data detection, and sequence gap reporting.`,
+    optimizationTips: [
+      "Classic gap-and-island technique: log_id - ROW_NUMBER() creates same group value for contiguous IDs",
+      "ROW_NUMBER over ordered data produces sequential numbers that, when subtracted from actual IDs, cluster contiguous ranges",
+      "MIN/MAX per group gives range boundaries",
+      "Index on log_id for efficient ordering"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Single isolated log_id \u2014 start_id = end_id",
+      "All log_ids contiguous \u2014 single range",
+      "Duplicate log_ids \u2014 may break the technique",
+      "Very large gaps between ranges",
+      "Empty table \u2014 no results"
     ]
   },
 
@@ -3586,46 +4540,46 @@ CREATE TABLE hierarchy (
   e_id INT,
   m_id INT
 );
+
+INSERT INTO hierarchy VALUES
+(2, 1), (3, 1), (4, 2), (5, 2),
+(6, 3), (7, 4), (8, 5);
 `,
     mySolution: null,
     systemSolution: `WITH RECURSIVE ReporteesCTE AS (
-    -- Anchor member: Get the immediate reportees
-    SELECT 
-        m_id AS manager_id, 
+    SELECT
+        m_id AS manager_id,
         e_id AS employee_id
-    FROM 
-        hierarchy
-    
-    UNION ALL
-    
-    -- Recursive part: Get the reportees of the reportees
-    SELECT 
-        h.m_id AS manager_id, 
-        r.employee_id
-    FROM 
-        hierarchy h
-    JOIN 
-        ReporteesCTE r ON h.e_id = r.manager_id
-)
+    FROM hierarchy
 
--- Count the number of reportees under each manager
-SELECT 
+    UNION ALL
+
+    SELECT
+        h.m_id AS manager_id,
+        r.employee_id
+    FROM hierarchy h
+    JOIN ReporteesCTE r ON h.e_id = r.manager_id
+)
+SELECT
     manager_id AS m_id,
     COUNT(DISTINCT employee_id) AS num_of_reportees
-FROM 
-    ReporteesCTE
-GROUP BY 
-    manager_id
-ORDER BY 
-    num_of_reportees desc, m_id;`,
+FROM ReporteesCTE
+GROUP BY manager_id
+ORDER BY num_of_reportees DESC, m_id;`,
     starterCode: `-- Hierarchy Reportee Count\n-- Write your solution here\nSELECT *\nFROM hierarchy;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Recursive CTE traversal of org hierarchy counts all direct and indirect reports under each manager. This is essential for span-of-control analysis, restructuring decisions, and understanding organizational bottlenecks.`,
+    optimizationTips: [
+      "WITH RECURSIVE builds the full reporting chain from each manager down",
+      "Anchor: direct reports; Recursive: reports of reports",
+      "COUNT(DISTINCT employee_id) avoids double-counting in diamond hierarchies",
+      "Index on (e_id, m_id) for efficient recursive joins"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Employee with no reports \u2014 not in result as manager",
+      "Top-level manager (no m_id) \u2014 NULL m_id handling",
+      "Diamond hierarchy (employee reports to two managers) \u2014 DISTINCT prevents double-count",
+      "Circular reporting chain \u2014 infinite recursion risk",
+      "Very deep hierarchy \u2014 PostgreSQL recursion limit"
     ]
   },
 
@@ -3653,42 +4607,51 @@ CREATE TABLE events (
   event_type VARCHAR,
   event_time TIMESTAMP
 );
+
+INSERT INTO events VALUES
+(1, 'page_view', '2024-01-01 10:00:00'),
+(1, 'click', '2024-01-01 10:15:00'),
+(1, 'page_view', '2024-01-01 10:25:00'),
+(1, 'click', '2024-01-01 11:30:00'),
+(1, 'page_view', '2024-01-01 11:45:00'),
+(2, 'page_view', '2024-01-01 09:00:00'),
+(2, 'click', '2024-01-01 09:10:00');
 `,
     mySolution: null,
     systemSolution: `WITH cte AS (
-    SELECT 
-         , LAG(event_time, 1, event_time) OVER (PARTITION BY userid ORDER BY event_time) AS prev_event_time      --     Get previous event_time per user
-         , TIMESTAMPDIFF(MINUTE,
-                         LAG(event_time, 1, event_time) OVER (PARTITION BY userid ORDER BY event_time), 
-                         event_time) AS time_diff                                               --     Calculate difference in minutes between current and previous event
+    SELECT *,
+      LAG(event_time, 1, event_time) OVER (PARTITION BY userid ORDER BY event_time) AS prev_event_time,
+      EXTRACT(EPOCH FROM (event_time - LAG(event_time, 1, event_time) OVER (PARTITION BY userid ORDER BY event_time))) / 60 AS time_diff
     FROM events
 ),
 cte2 AS (
-    SELECT userid
-         , event_type
-         , prev_event_time
-         , event_time
-         , CASE WHEN time_diff <= 30 THEN 0 ELSE 1 END AS flag                                       --     Flag 1 if gap > 30 mins, else 0
-         , SUM(CASE WHEN time_diff <= 30 THEN 0 ELSE 1 END) OVER (PARTITION BY userid ORDER BY event_time) AS group_id  --     Assign group/session ids based on flag
+    SELECT userid, event_type, prev_event_time, event_time,
+      CASE WHEN time_diff <= 30 THEN 0 ELSE 1 END AS flag,
+      SUM(CASE WHEN time_diff <= 30 THEN 0 ELSE 1 END) OVER (PARTITION BY userid ORDER BY event_time) AS group_id
     FROM cte
 )
-SELECT userid
-     , ROW_NUMBER() OVER (PARTITION BY userid ORDER BY MIN(event_time)) AS session_id                  --     Assign session number per user
-     , MIN(event_time) AS session_start_time                                                          --     Get session start time
-     , MAX(event_time) AS session_end_time                                                            --     Get session end time
-     , TIMESTAMPDIFF(MINUTE, MIN(event_time), MAX(event_time)) AS session_duration                     --     Calculate session duration in minutes
-     , COUNT() AS event_count                                                                        --     Count events in session
+SELECT userid,
+  ROW_NUMBER() OVER (PARTITION BY userid ORDER BY MIN(event_time)) AS session_id,
+  MIN(event_time) AS session_start_time,
+  MAX(event_time) AS session_end_time,
+  EXTRACT(EPOCH FROM (MAX(event_time) - MIN(event_time))) / 60 AS session_duration,
+  COUNT(*) AS event_count
 FROM cte2
-GROUP BY userid, group_id                                                                           --     Group by user and session group
-;`,
+GROUP BY userid, group_id;`,
     starterCode: `-- User Session Activity\n-- Write your solution here\nSELECT *\nFROM events;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Session detection from raw event streams is foundational for web/app analytics. Identifying session boundaries (30-minute inactivity gap) enables calculation of engagement metrics, retention analysis, and user behavior funnel optimization.`,
+    optimizationTips: [
+      "EXTRACT(EPOCH FROM interval) / 60 replaces TIMESTAMPDIFF(MINUTE) in PostgreSQL",
+      "LAG with default value handles the first event per user",
+      "Running SUM of flags creates session group IDs",
+      "ROW_NUMBER assigns sequential session numbers per user"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "User with only one event \u2014 single session with 0 duration",
+      "Events exactly 30 minutes apart \u2014 same or new session?",
+      "Events at the exact same timestamp",
+      "Very long gaps between sessions",
+      "NULL event_time values"
     ]
   },
 
@@ -3722,22 +4685,38 @@ CREATE TABLE assessments (
   algo INT,
   bug_fixing INT
 );
+
+INSERT INTO assessments VALUES
+(1, 3, 100, 100, NULL),
+(2, 3, 100, 80, 100),
+(3, 5, 100, 100, 100),
+(4, 5, 90, 100, 100),
+(5, 2, NULL, 100, NULL),
+(6, 2, 100, NULL, 100);
 `,
     mySolution: null,
-    systemSolution: `select experience, COUNT() as total_condidates
-,sum(case when (case when sql_score IS null or sql_score=100 then 1 else 0 end +
- case when algo IS null or algo=100 then 1 else 0 end +
- case when bug_fixing IS null or bug_fixing=100 then 1 else 0 end)=3 then 1 else 0 end) as perfect_score_candidates
-from assessments
-group by experience`,
+    systemSolution: `SELECT experience, COUNT(*) AS total_candidates,
+  SUM(CASE WHEN (
+    CASE WHEN sql_score IS NULL OR sql_score = 100 THEN 1 ELSE 0 END +
+    CASE WHEN algo IS NULL OR algo = 100 THEN 1 ELSE 0 END +
+    CASE WHEN bug_fixing IS NULL OR bug_fixing = 100 THEN 1 ELSE 0 END
+  ) = 3 THEN 1 ELSE 0 END) AS perfect_score_candidates
+FROM assessments
+GROUP BY experience;`,
     starterCode: `-- Perfect Score Candidates\n-- Write your solution here\nSELECT *\nFROM assessments;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Perfect score analysis per experience level reveals hiring pipeline quality. NULL-aware scoring (treating unassigned tasks as non-failures) correctly handles partial assessments, providing fair evaluation metrics for recruitment optimization.`,
+    optimizationTips: [
+      "Nested CASE handles NULL as 'not required' (pass by default)",
+      "Sum of 3 individual CASE flags = 3 means all tasks passed",
+      "Single-pass GROUP BY avoids correlated subqueries",
+      "No JOIN needed \u2014 all data in one table"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "All scores NULL \u2014 candidate is 'perfect' (no tasks assigned)",
+      "Score of 99 \u2014 not a perfect score",
+      "Experience level with no perfect scores",
+      "Single candidate per experience level",
+      "All candidates have perfect scores"
     ]
   },
 
@@ -3779,15 +4758,15 @@ Write a query to forecast the budget for all projects and return a label of "ove
         ]
       }
     ],
-    sampleData: `DROP TABLE IF EXISTS employees;
+    sampleData: `DROP TABLE IF EXISTS project_employees;
+DROP TABLE IF EXISTS projects;
+DROP TABLE IF EXISTS employees;
 
 CREATE TABLE employees (
   id INT,
   name VARCHAR,
   salary INT
 );
-
-DROP TABLE IF EXISTS projects;
 
 CREATE TABLE projects (
   id INT,
@@ -3797,60 +4776,70 @@ CREATE TABLE projects (
   budget INT
 );
 
-DROP TABLE IF EXISTS project_employees;
-
 CREATE TABLE project_employees (
   project_id INT,
   employee_id INT
 );
+
+INSERT INTO employees VALUES
+(1, 'Ankit', 120000),
+(2, 'Rohit', 80000),
+(3, 'Priya', 100000);
+
+INSERT INTO projects VALUES
+(1, 'Alpha', '2024-01-01', '2024-06-30', 50000),
+(2, 'Beta', '2024-01-01', '2024-12-31', 200000);
+
+INSERT INTO project_employees VALUES
+(1, 1), (1, 2), (2, 3);
 `,
-    mySolution: `with salary_budget as(
-select p.project_id,
-sum(e.salary) as total_salary
-from employees e
-inner join  project_employees p
-on e.id=p.employee_id
-group by p.project_id)
-select p.title,p.budget,
-case when round(datediff(p.end_date,p.start_date)/365,2) s.total_salary >budget then 'overbudget' else 'within budget'
-end as label 
-from projects p
-inner join salary_budget s
-on p.id=s.project_id
-order by title`,
-    systemSolution: `WITH Project_Salary_Cost AS (
-    SELECT 
-        p.title AS project_title,                                         -- Project title from Projects table
-        p.budget,                                                        -- Project budget
-        SUM(e.salary  (DATEDIFF(p.end_date, p.start_date) / 365.0)) AS total_salary_cost  -- Total salary cost prorated by project duration in years
-    FROM 
-        Projects p
-    JOIN 
-        Project_Employees pe ON p.id = pe.project_id                      -- Join to get employees assigned to projects
-    JOIN 
-        Employees e ON e.id = pe.employee_id                             -- Join to get employee salaries
-    GROUP BY 
-        p.id, p.title, p.budget                                           -- Group by project to calculate total salary cost per project
+    mySolution: `WITH salary_budget AS (
+SELECT p.project_id,
+  SUM(e.salary) AS total_salary
+FROM employees e
+INNER JOIN project_employees p ON e.id = p.employee_id
+GROUP BY p.project_id
 )
-SELECT 
-    project_title AS title,                                               -- Project title
-    budget,                                                             -- Project budget
-    CASE 
-        WHEN total_salary_cost > budget THEN 'overbudget'                -- Label 'overbudget' if total cost exceeds budget
-        ELSE 'within budget'                                              -- Else label 'within budget'
+SELECT p.title, p.budget,
+  CASE WHEN ROUND((p.end_date - p.start_date)::NUMERIC / 365, 2) * s.total_salary > budget THEN 'overbudget'
+    ELSE 'within budget'
+  END AS label
+FROM projects p
+INNER JOIN salary_budget s ON p.id = s.project_id
+ORDER BY title`,
+    systemSolution: `WITH Project_Salary_Cost AS (
+    SELECT
+        p.title AS project_title,
+        p.budget,
+        SUM(e.salary * ((p.end_date - p.start_date)::NUMERIC / 365.0)) AS total_salary_cost
+    FROM Projects p
+    JOIN Project_Employees pe ON p.id = pe.project_id
+    JOIN Employees e ON e.id = pe.employee_id
+    GROUP BY p.id, p.title, p.budget
+)
+SELECT
+    project_title AS title,
+    budget,
+    CASE
+        WHEN total_salary_cost > budget THEN 'overbudget'
+        ELSE 'within budget'
     END AS label
-FROM 
-    Project_Salary_Cost                                                    -- Use CTE with calculated salary costs
-ORDER BY 
-    project_title;                                                       -- Order by project title`,
+FROM Project_Salary_Cost
+ORDER BY project_title;`,
     starterCode: `-- Project Budget\n-- Write your solution here\nSELECT *\nFROM employees;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Project budget forecasting prorates employee salaries by project duration to predict cost overruns. This enables proactive budget management, resource reallocation, and financial planning before projects exceed their allocated budgets.`,
+    optimizationTips: [
+      "(end_date - start_date)::NUMERIC / 365.0 replaces MySQL's DATEDIFF / 365 in PostgreSQL",
+      "CTE pre-calculates total salary cost per project",
+      "CASE WHEN labels projects as overbudget vs within budget",
+      "JOIN chain: projects → project_employees → employees"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Project with no assigned employees \u2014 no salary cost",
+      "Very short project \u2014 fraction of year salary",
+      "Budget exactly equal to cost \u2014 'within budget'",
+      "Employee on multiple projects \u2014 salary counted per project",
+      "Project spanning exactly one year \u2014 full annual salary"
     ]
   },
 
@@ -3878,35 +4867,39 @@ CREATE TABLE orders (
   order_id INT,
   product_name VARCHAR
 );
+
+INSERT INTO orders VALUES
+(1, 101, 'Laptop'),
+(1, 102, 'Mouse'),
+(1, 103, 'Keyboard'),
+(2, 104, 'Laptop'),
+(2, 105, 'Mouse'),
+(2, 106, 'Phone Case'),
+(3, 107, 'Laptop'),
+(3, 108, 'Mouse'),
+(4, 109, 'Laptop');
 `,
-    mySolution: `with salary_budget as(
-select p.project_id,
-sum(e.salary) as total_salary
-from employees e
-inner join  project_employees p
-on e.id=p.employee_id
-group by p.project_id)
-select p.title,p.budget,
-case when round(datediff(p.end_date,p.start_date)/365,2) s.total_salary >budget then 'overbudget' else 'within budget'
-end as label 
-from projects p
-inner join salary_budget s
-on p.id=s.project_id
-order by title`,
-    systemSolution: `select customer_id, count(distinct product_name) as total_distinct_products
-from orders 
-where customer_id not in (select customer_id from orders where product_name='Phone Case')
-group by customer_id
-having count(distinct case when product_name in ('Laptop','Mouse') then product_name end)=2
-order by customer_id;`,
+    mySolution: null,
+    systemSolution: `SELECT customer_id, COUNT(DISTINCT product_name) AS total_distinct_products
+FROM orders
+WHERE customer_id NOT IN (SELECT customer_id FROM orders WHERE product_name = 'Phone Case')
+GROUP BY customer_id
+HAVING COUNT(DISTINCT CASE WHEN product_name IN ('Laptop', 'Mouse') THEN product_name END) = 2
+ORDER BY customer_id;`,
     starterCode: `-- Selective Buyers Analysis\n-- Write your solution here\nSELECT *\nFROM orders;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Customer purchase pattern analysis combining inclusion (bought A AND B) with exclusion (never bought C) criteria enables targeted marketing, cross-sell recommendations, and customer segmentation for product bundle strategies.`,
+    optimizationTips: [
+      "NOT IN subquery filters out customers who ever bought 'Phone Case'",
+      "HAVING with COUNT(DISTINCT CASE) ensures both required products were purchased",
+      "Single-table query with no joins \u2014 efficient for simple product analysis",
+      "DISTINCT in CASE prevents double-counting repeat purchases"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Customer bought Laptop twice but no Mouse \u2014 excluded",
+      "Customer bought all three products \u2014 excluded by Phone Case filter",
+      "Customer bought only Laptop and Mouse \u2014 total_distinct_products = 2",
+      "No customers match criteria \u2014 empty result",
+      "NULL product_name \u2014 not matched by any filter"
     ]
   },
 
@@ -3938,39 +4931,55 @@ CREATE TABLE train_schedule (
   arrival_time TIME,
   departure_time TIME
 );
+
+INSERT INTO train_schedule VALUES
+(1, 101, '08:00', '08:30'),
+(1, 102, '08:15', '08:45'),
+(1, 103, '08:40', '09:10'),
+(1, 104, '09:00', '09:30'),
+(2, 201, '07:00', '07:20'),
+(2, 202, '07:10', '07:40');
 `,
-    mySolution: `with cte as(select station_id,arrival_time,+1 as points
-from train_schedule
-union all
-select station_id,departure_time,-1
-from train_schedule)
-select station_id,arrival_time,
-sum(points) over(partition by station_id order by arrival_time) as points
-from cte`,
+    mySolution: `WITH cte AS (
+SELECT station_id, arrival_time, +1 AS points
+FROM train_schedule
+UNION ALL
+SELECT station_id, departure_time, -1
+FROM train_schedule
+)
+SELECT station_id, arrival_time,
+  SUM(points) OVER(PARTITION BY station_id ORDER BY arrival_time) AS points
+FROM cte`,
     systemSolution: `WITH combined_times AS (
-    SELECT station_id, arrival_time AS event_time, 1 AS event_type 
-    FROM train_schedule 
+    SELECT station_id, arrival_time AS event_time, 1 AS event_type
+    FROM train_schedule
     UNION ALL
-    SELECT station_id,departure_time AS event_time, -1 AS event_type 
-    FROM train_schedule 
+    SELECT station_id, departure_time AS event_time, -1 AS event_type
+    FROM train_schedule
 ),
 cumulative_events AS (
-    SELECT station_id, 
+    SELECT station_id,
         event_time,
-        SUM(event_type) OVER (partition by station_id ORDER BY event_time) AS current_trains 
+        SUM(event_type) OVER (PARTITION BY station_id ORDER BY event_time) AS current_trains
     FROM combined_times
 )
-SELECT station_id ,MAX(current_trains) AS min_platforms_required 
+SELECT station_id, MAX(current_trains) AS min_platforms_required
 FROM cumulative_events
-group by station_id;`,
+GROUP BY station_id;`,
     starterCode: `-- Train Schedule\n-- Write your solution here\nSELECT *\nFROM train_schedule;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `The sweep-line algorithm (arrival = +1, departure = -1 events) determines peak concurrent occupancy at each station. This classic interval scheduling technique is used in platform allocation, meeting room scheduling, and resource capacity planning.`,
+    optimizationTips: [
+      "UNION ALL creates +1/-1 events for arrivals and departures",
+      "Running SUM over ordered events gives concurrent occupancy at each point",
+      "MAX of running sum gives peak occupancy = minimum platforms needed",
+      "Index on (station_id, arrival_time, departure_time) for efficiency"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Train departing exactly when another arrives \u2014 same platform reuse?",
+      "Trains with same arrival and departure time",
+      "Single train at a station \u2014 always 1 platform",
+      "All trains overlapping \u2014 platforms = number of trains",
+      "Station with no trains \u2014 0 platforms"
     ]
   },
 
@@ -3985,15 +4994,21 @@ Note : Dates are displayed as per UTC time zone.`,
     schema: [],
     sampleData: ``,
     mySolution: null,
-    systemSolution: `SELECT DATE_SUB(DATE(now()), INTERVAL case when DAYOFWEEK(now())=1 then 7 else DAYOFWEEK(now())-1 end DAY) as last_sunday;`,
+    systemSolution: `SELECT CURRENT_DATE - CAST(EXTRACT(DOW FROM CURRENT_DATE) AS INT) - CASE WHEN EXTRACT(DOW FROM CURRENT_DATE) = 0 THEN 7 ELSE 0 END AS last_sunday;`,
     starterCode: `-- Last Sunday\n-- Write your solution here\nSELECT 1;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Date arithmetic to find the last occurrence of a specific weekday is common in weekly reporting, payroll processing, and SLA deadline calculations. PostgreSQL's EXTRACT(DOW) returns 0 for Sunday, requiring special handling.`,
+    optimizationTips: [
+      "EXTRACT(DOW FROM date) returns 0=Sunday through 6=Saturday in PostgreSQL",
+      "Subtraction of DOW gives the previous Sunday for Mon-Sat",
+      "Special case: if today is Sunday, subtract 7 to get LAST Sunday",
+      "No table scan needed \u2014 pure date computation"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Current day is Sunday \u2014 should return previous Sunday, not today",
+      "Current day is Monday \u2014 should return yesterday",
+      "Current day is Saturday \u2014 should return 6 days ago",
+      "Leap year boundary dates",
+      "Year boundary (e.g., Jan 1 is Monday)"
     ]
   },
 
@@ -4047,7 +5062,8 @@ By the total number of reviews (descending).`,
         ]
       }
     ],
-    sampleData: `DROP TABLE IF EXISTS companies;
+    sampleData: `DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS companies;
 
 CREATE TABLE companies (
   id INT,
@@ -4056,54 +5072,60 @@ CREATE TABLE companies (
   is_promoted INT
 );
 
-DROP TABLE IF EXISTS categories;
-
 CREATE TABLE categories (
   company_id INT,
   name VARCHAR,
   rating DECIMAL
 );
+
+INSERT INTO companies VALUES
+(1, 'TechCorp', '555-0101', 1),
+(2, 'DataInc', '555-0202', 0),
+(3, 'WebStudio', '555-0303', 0),
+(4, 'AppForge', '555-0404', 0);
+
+INSERT INTO categories VALUES
+(2, 'Service', 4.5),
+(2, 'Quality', 3.8),
+(3, 'Service', 2.0),
+(3, 'Quality', 1.5),
+(4, 'Service', 0.5);
 `,
-    mySolution: `with cte as(
-select company_id,
-round(avg(rating),1) as  avg_rating,
-count() as total_rating
-from categories
-group by company_id)
-select 
-case when is_promoted =1 then concat('[PROMOTED] ', c1.name) else c1.name end as name,c1.phone,
-case when is_promoted =1 then NULL 
-else CONCAT(
-REPEAT('', floor(c.avg_rating)),' (',
-avg_rating,',' , ' based on ',c.total_rating,' reviews',')')
-end as rating
-from cte c
-left join companies c1
-on c.company_id=c1.id
-where (c1.is_promoted=0 and c.avg_rating>=1)
-or c1.is_promoted=1
-order by 
-c1.is_promoted desc,
-c.avg_rating desc,
-c.total_rating desc`,
+    mySolution: `WITH cte AS (
+SELECT company_id,
+  ROUND(AVG(rating), 1) AS avg_rating,
+  COUNT(*) AS total_rating
+FROM categories
+GROUP BY company_id
+)
+SELECT
+  CASE WHEN is_promoted = 1 THEN CONCAT('[PROMOTED] ', c1.name) ELSE c1.name END AS name,
+  c1.phone,
+  CASE WHEN is_promoted = 1 THEN NULL
+    ELSE CONCAT(
+      REPEAT('*', FLOOR(c.avg_rating)::INT), ' (',
+      c.avg_rating, ', based on ', c.total_rating, ' reviews)')
+  END AS rating
+FROM cte c
+LEFT JOIN companies c1 ON c.company_id = c1.id
+WHERE (c1.is_promoted = 0 AND c.avg_rating >= 1)
+  OR c1.is_promoted = 1
+ORDER BY c1.is_promoted DESC, c.avg_rating DESC, c.total_rating DESC`,
     systemSolution: `WITH company_ratings AS (
-    SELECT 
+    SELECT
         c.id AS company_id,
         c.name AS company_name,
         c.phone AS company_phone,
         c.is_promoted,
         AVG(cat.rating) AS avg_rating,
         COUNT(cat.rating) AS total_reviews
-    FROM 
-        companies c
-    INNER JOIN 
-        categories cat ON c.id = cat.company_id
-    GROUP BY 
-        c.id, c.name, c.phone, c.is_promoted
+    FROM companies c
+    INNER JOIN categories cat ON c.id = cat.company_id
+    GROUP BY c.id, c.name, c.phone, c.is_promoted
 ),
 formatted_output AS (
-    SELECT 
-        CASE 
+    SELECT
+        CASE
             WHEN cr.is_promoted = 1 THEN CONCAT('[PROMOTED] ', cr.company_name)
             ELSE cr.company_name
         END AS name,
@@ -4111,40 +5133,37 @@ formatted_output AS (
         CASE
             WHEN cr.is_promoted = 1 THEN NULL
             ELSE CONCAT(
-                REPEAT('', FLOOR(cr.avg_rating)), 
-                ' (', 
-                FORMAT(cr.avg_rating, 1), 
-                ', based on ', 
-                cr.total_reviews, 
+                REPEAT('*', FLOOR(cr.avg_rating)::INT),
+                ' (',
+                TO_CHAR(cr.avg_rating, 'FM999.0'),
+                ', based on ',
+                cr.total_reviews,
                 ' reviews)'
             )
         END AS rating,
         cr.is_promoted,
         cr.total_reviews,
         cr.avg_rating
-    FROM 
-        company_ratings cr
-    WHERE 
-        cr.is_promoted = 1 OR cr.avg_rating >= 1
+    FROM company_ratings cr
+    WHERE cr.is_promoted = 1 OR cr.avg_rating >= 1
 )
-SELECT 
-    name, 
-    phone, 
-    rating 
-FROM 
-    formatted_output
-ORDER BY 
-    is_promoted DESC, 
-    avg_rating DESC, 
-    total_reviews DESC;`,
+SELECT name, phone, rating
+FROM formatted_output
+ORDER BY is_promoted DESC, avg_rating DESC, total_reviews DESC;`,
     starterCode: `-- The Yellow Pages\n-- Write your solution here\nSELECT *\nFROM companies;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Business directory formatting with promotion flags, star ratings, and review counts creates a structured Yellow Pages listing. CONCAT with REPEAT generates visual star ratings, while conditional formatting separates promoted (unrated) from organic (rated) listings.`,
+    optimizationTips: [
+      "REPEAT('*', FLOOR(avg)::INT) generates star characters in PostgreSQL",
+      "TO_CHAR(value, 'FM999.0') replaces MySQL's FORMAT() for decimal formatting",
+      "FM prefix removes leading spaces in TO_CHAR output",
+      "WHERE filter in CTE excludes sub-1-star non-promoted companies before formatting"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Company with no reviews \u2014 not in categories table, excluded from output",
+      "Promoted company with reviews \u2014 rating shown as NULL",
+      "Average rating below 1.0 for non-promoted \u2014 excluded",
+      "Rating of exactly 1.0 \u2014 included (>= threshold)",
+      "Company with 0.0 average rating \u2014 excluded"
     ]
   },
 
@@ -4174,9 +5193,18 @@ CREATE TABLE sales (
   sale_date DATE,
   sales_amount INT
 );
+
+INSERT INTO sales VALUES
+(1, 1, '2024-07-15', 500),
+(2, 1, '2024-08-20', 600),
+(3, 1, '2024-09-10', 400),
+(4, 2, '2024-07-01', 300),
+(5, 2, '2024-08-15', 350),
+(6, 1, '2024-10-05', 700),
+(7, 2, '2024-10-12', 250);
 `,
     mySolution: `WITH last_quarter_sales AS (
-    SELECT 
+    SELECT
         product_id,
         SUM(sales_amount) AS lq_total
     FROM sales
@@ -4184,9 +5212,8 @@ CREATE TABLE sales (
       AND sale_date < DATE_TRUNC('quarter', CURRENT_DATE)
     GROUP BY product_id
 ),
-
 qtd_sales AS (
-    SELECT 
+    SELECT
         product_id,
         SUM(sales_amount) AS qtd_total
     FROM sales
@@ -4194,46 +5221,38 @@ qtd_sales AS (
       AND sale_date <= CURRENT_DATE
     GROUP BY product_id
 )
-
-SELECT 
+SELECT
     COALESCE(lq.product_id, qtd.product_id) AS product_id,
     COALESCE(lq.lq_total, 0) AS last_quarter_sales,
     COALESCE(qtd.qtd_total, 0) AS qtd_sales,
     ROUND(
-        100.0  (COALESCE(qtd.qtd_total, 0) - COALESCE(lq.lq_total, 0)) 
-        / NULLIF(lq.lq_total, 0), 
+        100.0 * (COALESCE(qtd.qtd_total, 0) - COALESCE(lq.lq_total, 0))
+        / NULLIF(lq.lq_total, 0),
         2
     ) AS pct_change
 FROM last_quarter_sales lq
 FULL OUTER JOIN qtd_sales qtd USING (product_id)
 ORDER BY last_quarter_sales DESC;`,
-    systemSolution: `-- Calculate quarter-to-date start date
-with qtd_start AS (
-  SELECT 
-    DATE_FORMAT(
-        DATE_SUB(CURDATE(), INTERVAL (MOD(MONTH(CURDATE())-1, 3)) MONTH),
-        '%Y-%m-01'
-    ) AS current_qtr_start
-),
-DateRanges as (
-select current_qtr_start,current_qtr_start - INTERVAL 1 QUARTER as last_qtr_start
-,current_qtr_start - INTERVAL 1 DAY as last_qtr_end
-from qtd_start
+    systemSolution: `WITH DateRanges AS (
+  SELECT
+    DATE_TRUNC('quarter', CURRENT_DATE) AS current_qtr_start,
+    DATE_TRUNC('quarter', CURRENT_DATE - INTERVAL '3 months') AS last_qtr_start,
+    DATE_TRUNC('quarter', CURRENT_DATE) - INTERVAL '1 day' AS last_qtr_end
 ),
 SalesData AS (
-    SELECT 
+    SELECT
         product_id,
-        SUM(CASE 
-            WHEN sale_date >= (SELECT last_qtr_start FROM DateRanges) 
-                 AND sale_date <= (SELECT last_qtr_end FROM DateRanges) 
-            THEN sales_amount 
-            ELSE 0 
+        SUM(CASE
+            WHEN sale_date >= (SELECT last_qtr_start FROM DateRanges)
+                 AND sale_date <= (SELECT last_qtr_end FROM DateRanges)
+            THEN sales_amount
+            ELSE 0
         END) AS last_quarter_sales,
-        SUM(CASE 
-            WHEN sale_date >= (SELECT current_qtr_start FROM DateRanges) 
-                 AND sale_date <= CURRENT_DATE 
-            THEN sales_amount 
-            ELSE 0 
+        SUM(CASE
+            WHEN sale_date >= (SELECT current_qtr_start FROM DateRanges)
+                 AND sale_date <= CURRENT_DATE
+            THEN sales_amount
+            ELSE 0
         END) AS qtd_sales
     FROM sales
     GROUP BY product_id
@@ -4241,13 +5260,19 @@ SalesData AS (
 SELECT product_id, last_quarter_sales, qtd_sales
 FROM SalesData;`,
     starterCode: `-- Quarterly sales Analysis\n-- Write your solution here\nSELECT *\nFROM sales;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Quarterly sales comparison (last quarter total vs. quarter-to-date) is a standard financial KPI. DATE_TRUNC for quarter boundaries eliminates manual month calculations, and FULL OUTER JOIN preserves products that exist in only one quarter.`,
+    optimizationTips: [
+      "DATE_TRUNC('quarter', date) replaces MySQL's DATE_FORMAT + MOD + MONTH approach",
+      "FULL OUTER JOIN ensures products in either quarter appear",
+      "NULLIF prevents division by zero in percentage change",
+      "CTE with DateRanges computes boundaries once, reused in CASE"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Product with sales only in last quarter \u2014 qtd_sales = 0",
+      "Product with sales only in current quarter \u2014 last_quarter_sales = 0",
+      "No sales in either quarter \u2014 not in result",
+      "Sale on quarter boundary date \u2014 correct assignment",
+      "Current date is first day of quarter \u2014 qtd may be very small"
     ]
   },
 
@@ -4278,14 +5303,13 @@ You are given two tables, "teams" and "matches", with the following structures:`
         ]
       }
     ],
-    sampleData: `DROP TABLE IF EXISTS teams;
+    sampleData: `DROP TABLE IF EXISTS matches;
+DROP TABLE IF EXISTS teams;
 
 CREATE TABLE teams (
   team_id INT,
   team_name VARCHAR
 );
-
-DROP TABLE IF EXISTS matches;
 
 CREATE TABLE matches (
   match_id INT,
@@ -4294,36 +5318,47 @@ CREATE TABLE matches (
   host_goals INT,
   guest_goals INT
 );
+
+INSERT INTO teams VALUES
+(1, 'Brazil'), (2, 'Germany'), (3, 'France'), (4, 'Argentina');
+
+INSERT INTO matches VALUES
+(1, 1, 2, 3, 1),
+(2, 3, 4, 2, 2),
+(3, 1, 3, 0, 1),
+(4, 2, 4, 2, 0);
 `,
-    mySolution: `with cte as(select host_team as team,
-case when host_goals> guest_goals  then 3 
- when host_goals< guest_goals  then 0 
-when  host_goals= guest_goals  then 1 end as  points
-from matches
-union all
-select guest_team,
-case when host_goals< guest_goals  then 3 
- when host_goals> guest_goals  then 0 
-when  host_goals= guest_goals  then 1 end as  points
-from matches)
-,cte1 as (select team,
-sum(points) as total_points
-From cte
-group by team)
-select t.team_id, t.team_name,
-coalesce(c1.total_points,0) as num_points
-from teams t
-left join cte1 c1
-on t.team_id=c1.team
-order by num_points desc;
+    mySolution: `WITH cte AS (
+SELECT host_team AS team,
+  CASE WHEN host_goals > guest_goals THEN 3
+    WHEN host_goals < guest_goals THEN 0
+    WHEN host_goals = guest_goals THEN 1 END AS points
+FROM matches
+UNION ALL
+SELECT guest_team,
+  CASE WHEN host_goals < guest_goals THEN 3
+    WHEN host_goals > guest_goals THEN 0
+    WHEN host_goals = guest_goals THEN 1 END AS points
+FROM matches
+),
+cte1 AS (
+SELECT team, SUM(points) AS total_points
+FROM cte
+GROUP BY team
+)
+SELECT t.team_id, t.team_name,
+  COALESCE(c1.total_points, 0) AS num_points
+FROM teams t
+LEFT JOIN cte1 c1 ON t.team_id = c1.team
+ORDER BY num_points DESC;
 
 
 -- TECHNIQUE 1: Avoid UNION ALL if possible (faster)
-SELECT 
+SELECT
     t.team_id,
     t.team_name,
     COALESCE(
-        SUM(CASE 
+        SUM(CASE
             WHEN m.host_team = t.team_id THEN
                 CASE WHEN m.host_goals > m.guest_goals THEN 3
                      WHEN m.host_goals = m.guest_goals THEN 1
@@ -4335,14 +5370,14 @@ SELECT
         END), 0
     ) AS num_points
 FROM teams t
-LEFT JOIN matches m 
+LEFT JOIN matches m
     ON t.team_id IN (m.host_team, m.guest_team)
 GROUP BY t.team_id, t.team_name
 ORDER BY num_points DESC, t.team_id ASC;
 
 -- TECHNIQUE 2: Pre-aggregated daily snapshots
 -- Instead of scanning all matches, maintain running totals`,
-    systemSolution: `SELECT 
+    systemSolution: `SELECT
     t.team_id,
     t.team_name,
     SUM(CASE
@@ -4357,13 +5392,19 @@ LEFT JOIN matches m ON m.host_team = t.team_id OR m.guest_team = t.team_id
 GROUP BY t.team_id, t.team_name
 ORDER BY num_points DESC, t.team_id ASC;`,
     starterCode: `-- Team Points Calculation\n-- Write your solution here\nSELECT *\nFROM teams;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `World Cup group stage point calculation (Win=3, Draw=1, Loss=0) from match results. The UNION ALL approach normalizes host/guest into a single team column, while the single-pass JOIN approach with nested CASE is more efficient for large datasets.`,
+    optimizationTips: [
+      "Single JOIN with OR + nested CASE avoids UNION ALL overhead",
+      "LEFT JOIN preserves teams with no matches (0 points)",
+      "COALESCE handles NULL from unmatched LEFT JOIN",
+      "Two approaches shown: UNION ALL (clearer) vs single SUM (faster)"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Team with no matches played \u2014 0 points",
+      "All draws \u2014 every team gets 1 point per match",
+      "0-0 draw vs other draws \u2014 same points",
+      "Team playing against itself \u2014 invalid data",
+      "Multiple matches between same teams"
     ]
   },
 
@@ -4398,7 +5439,8 @@ If an employee has no promotions, their current salary remains equal to the join
         ]
       }
     ],
-    sampleData: `DROP TABLE IF EXISTS employees;
+    sampleData: `DROP TABLE IF EXISTS promotions;
+DROP TABLE IF EXISTS employees;
 
 CREATE TABLE employees (
   id INT,
@@ -4406,50 +5448,62 @@ CREATE TABLE employees (
   joining_salary INT
 );
 
-DROP TABLE IF EXISTS promotions;
-
 CREATE TABLE promotions (
   emp_id INT,
   promotion_date DATE,
   percent_increase INT
 );
+
+INSERT INTO employees VALUES
+(1, 'Ankit', 50000),
+(2, 'Rohit', 60000),
+(3, 'Priya', 45000);
+
+INSERT INTO promotions VALUES
+(1, '2022-06-01', 10),
+(1, '2023-06-01', 15),
+(2, '2023-01-01', 20);
 `,
-    mySolution: `with cte as (select emp_id,
-  EXP(SUM(LOG(1 + percent_increase/100))) as per_increase
-from promotions
-group by emp_id)
-select e.id,e.name,e.joining_salary as initial_salary,
-round(coalesce(c.per_increase  e.joining_salary,e.joining_salary),1) as current_salary
-from employees e
-left join cte c
-on e.id=c.emp_id
-order by e.id asc`,
-    systemSolution: `WITH promotion_multipliers AS (
-    SELECT 
-        emp_id,
-        EXP(SUM(LOG(1 + percent_increase/100))) AS total_multiplier          -- Calculate compounded multiplier for all promotions per employee
-    FROM promotions
-    GROUP BY emp_id                                                        -- Group by employee to accumulate multipliers
+    mySolution: `WITH cte AS (
+SELECT emp_id,
+  EXP(SUM(LN(1 + percent_increase::NUMERIC / 100))) AS per_increase
+FROM promotions
+GROUP BY emp_id
 )
-SELECT 
+SELECT e.id, e.name, e.joining_salary AS initial_salary,
+  ROUND(COALESCE(c.per_increase * e.joining_salary, e.joining_salary)::NUMERIC, 1) AS current_salary
+FROM employees e
+LEFT JOIN cte c ON e.id = c.emp_id
+ORDER BY e.id ASC`,
+    systemSolution: `WITH promotion_multipliers AS (
+    SELECT
+        emp_id,
+        EXP(SUM(LN(1 + percent_increase::NUMERIC / 100))) AS total_multiplier
+    FROM promotions
+    GROUP BY emp_id
+)
+SELECT
     e.id,
     e.name,
-    e.joining_salary AS initial_salary,                                  -- Initial salary from employees table
-    ROUND(e.joining_salary  IFNULL(pm.total_multiplier, 1), 1) AS current_salary  -- Calculate current salary applying promotion multiplier, default 1 if no promotions
-FROM 
-    employees e
-LEFT JOIN 
-    promotion_multipliers pm ON e.id = pm.emp_id                         -- Join promotion multipliers, preserve employees without promotions
-ORDER BY 
-    e.id;                                                                -- Order results by employee id`,
+    e.joining_salary AS initial_salary,
+    ROUND((e.joining_salary * COALESCE(pm.total_multiplier, 1))::NUMERIC, 1) AS current_salary
+FROM employees e
+LEFT JOIN promotion_multipliers pm ON e.id = pm.emp_id
+ORDER BY e.id;`,
     starterCode: `-- Employees Current Salary\n-- Write your solution here\nSELECT *\nFROM employees;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Compound percentage salary calculation using EXP(SUM(LN())) is the mathematical trick for multiplying variable-rate increases without iteration. This pattern applies to compound interest, inflation-adjusted pricing, and any cumulative percentage growth calculation.`,
+    optimizationTips: [
+      "EXP(SUM(LN(1 + pct/100))) = product of (1 + pct/100) for all promotions",
+      "LN replaces MySQL's LOG (natural logarithm) in PostgreSQL",
+      "COALESCE(multiplier, 1) handles employees with no promotions",
+      "::NUMERIC cast needed for ROUND in PostgreSQL"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Employee with no promotions \u2014 current salary = joining salary",
+      "Employee with single promotion \u2014 simple percentage increase",
+      "Multiple promotions compound \u2014 not additive",
+      "100% increase \u2014 salary doubles",
+      "0% increase promotion \u2014 no change"
     ]
   },
 
@@ -4487,7 +5541,8 @@ ORDER BY
         ]
       }
     ],
-    sampleData: `DROP TABLE IF EXISTS employees;
+    sampleData: `DROP TABLE IF EXISTS salary_history;
+DROP TABLE IF EXISTS employees;
 
 CREATE TABLE employees (
   employee_id INT,
@@ -4497,105 +5552,102 @@ CREATE TABLE employees (
   intial_salary INT
 );
 
-DROP TABLE IF EXISTS salary_history;
-
 CREATE TABLE salary_history (
   employee_id INT,
   change_date DATE,
   salary INT,
   promotion VARCHAR
 );
+
+INSERT INTO employees VALUES
+(1, 'Ankit', '2020-01-15', 'Engineering', 50000),
+(2, 'Rohit', '2019-06-01', 'Marketing', 45000),
+(3, 'Priya', '2021-03-10', 'Engineering', 60000);
+
+INSERT INTO salary_history VALUES
+(1, '2021-01-15', 55000, 'Yes'),
+(1, '2022-01-15', 62000, 'Yes'),
+(1, '2023-01-15', 58000, 'No'),
+(2, '2020-06-01', 48000, 'Yes'),
+(2, '2021-06-01', 55000, 'Yes');
 `,
     mySolution: null,
     systemSolution: `WITH salary_union AS (
-    SELECT 
+    SELECT
         employee_id,
         join_date AS change_date,
-        initial_salary AS salary,
+        intial_salary AS salary,
         'No' AS promotion
     FROM employees
-
     UNION ALL
-
-    SELECT 
+    SELECT
         employee_id,
         change_date,
         salary,
         promotion
     FROM salary_history
 ),
-
 cte AS (
-    SELECT 
-        su.,
+    SELECT
+        su.*,
         RANK() OVER (PARTITION BY employee_id ORDER BY change_date DESC) AS rn_desc,
         RANK() OVER (PARTITION BY employee_id ORDER BY change_date ASC) AS rn_asc,
         LEAD(salary) OVER (PARTITION BY employee_id ORDER BY change_date DESC) AS prev_salary
     FROM salary_union su
 ),
-
 salary_growth_cte AS (
-    SELECT 
+    SELECT
         employee_id,
-        MAX(CASE WHEN rn_desc = 1 THEN salary END)  1.0 /
+        MAX(CASE WHEN rn_desc = 1 THEN salary END) * 1.0 /
         MAX(CASE WHEN rn_asc = 1 THEN salary END) AS salary_growth,
         MIN(change_date) AS join_date
     FROM cte
     GROUP BY employee_id
 ),
-
 decrease_flag AS (
-    SELECT 
+    SELECT
         employee_id,
         MAX(CASE WHEN prev_salary IS NOT NULL AND salary < prev_salary THEN 1 ELSE 0 END) AS has_decreased
     FROM cte
     GROUP BY employee_id
 )
-
--- Final Output
-SELECT 
+SELECT
     c.employee_id,
     MAX(CASE WHEN c.rn_desc = 1 THEN c.salary END) AS latest_salary,
     SUM(CASE WHEN c.promotion = 'Yes' THEN 1 ELSE 0 END) AS total_promotions,
     MAX(
-  CASE 
-    WHEN c.prev_salary IS NOT NULL AND c.prev_salary > 0 
-    THEN ROUND((c.salary - c.prev_salary)  100.0 / c.prev_salary, 2)
-    ELSE 0.00
-  END
-) AS max_perc_change,
-
-    CASE 
+      CASE
+        WHEN c.prev_salary IS NOT NULL AND c.prev_salary > 0
+        THEN ROUND((c.salary - c.prev_salary) * 100.0 / c.prev_salary, 2)
+        ELSE 0.00
+      END
+    ) AS max_perc_change,
+    CASE
         WHEN d.has_decreased = 1 THEN 'N'
         ELSE 'Y'
     END AS never_decreased,
-
     ROW_NUMBER() OVER (
         ORDER BY sg.salary_growth DESC, sg.join_date ASC
     ) AS RankByGrowth
-
 FROM cte c
-JOIN salary_growth_cte sg 
-    ON c.employee_id = sg.employee_id
-JOIN decrease_flag d 
-    ON c.employee_id = d.employee_id
-
-GROUP BY 
-    c.employee_id, 
-    sg.salary_growth, 
-    sg.join_date,
-    d.has_decreased
-
-ORDER BY 
-    c.employee_id;`,
+JOIN salary_growth_cte sg ON c.employee_id = sg.employee_id
+JOIN decrease_flag d ON c.employee_id = d.employee_id
+GROUP BY c.employee_id, sg.salary_growth, sg.join_date, d.has_decreased
+ORDER BY c.employee_id;`,
     starterCode: `-- Salary Growth Analysis\n-- Write your solution here\nSELECT *\nFROM employees;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Comprehensive salary progression analysis combining latest salary, promotion count, max percentage increase, decrease detection, and growth ranking provides a multi-dimensional view of employee performance for HR compensation reviews and retention planning.`,
+    optimizationTips: [
+      "UNION ALL combines initial salary with salary_history for complete timeline",
+      "RANK with DESC and ASC gets latest and earliest salary per employee",
+      "LEAD(salary) over DESC order gives previous salary for change calculation",
+      "EXP/LN pattern works for compound growth; here simple ratio is used"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Employee with no salary history \u2014 only initial salary",
+      "Salary decreased \u2014 never_decreased = 'N'",
+      "prev_salary is NULL for first record \u2014 max_perc_change ignores it",
+      "Same salary multiple times \u2014 0% change",
+      "Tied salary growth \u2014 broken by earliest join_date"
     ]
   },
 
@@ -4627,13 +5679,24 @@ CREATE TABLE orders (
   user_id INT,
   order_date DATE
 );
+
+INSERT INTO orders VALUES
+(1, 101, '2024-01-01'),
+(2, 101, '2024-01-05'),
+(3, 101, '2024-02-10'),
+(4, 102, '2024-01-10'),
+(5, 102, '2024-01-12'),
+(6, 102, '2024-01-20'),
+(7, 103, '2024-01-01'),
+(8, 103, '2024-01-03'),
+(9, 103, '2024-02-15');
 `,
     mySolution: `WITH ordered_purchases AS (
   SELECT
     user_id,
     order_date,
     ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY order_date) AS rn,
-    COUNT() OVER (PARTITION BY user_id) AS total_orders
+    COUNT(*) OVER (PARTITION BY user_id) AS total_orders
   FROM orders
 ),
 pivoted AS (
@@ -4646,16 +5709,16 @@ pivoted AS (
   WHERE total_orders = 3
   GROUP BY user_id
 )
-SELECT 
+SELECT *
 FROM pivoted
-WHERE DATEDIFF(second_order_date, first_order_date) <= 7 
-  AND DATEDIFF(third_order_date, second_order_date) >= 30;`,
+WHERE (second_order_date - first_order_date) <= 7
+  AND (third_order_date - second_order_date) >= 30;`,
     systemSolution: `WITH ordered_purchases AS (
   SELECT
     user_id,
     order_date,
     ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY order_date) AS rn,
-    COUNT() OVER (PARTITION BY user_id) AS total_orders
+    COUNT(*) OVER (PARTITION BY user_id) AS total_orders
   FROM orders
 ),
 pivoted AS (
@@ -4668,18 +5731,24 @@ pivoted AS (
   WHERE total_orders = 3
   GROUP BY user_id
 )
-SELECT 
+SELECT *
 FROM pivoted
-WHERE DATEDIFF(second_order_date, first_order_date) <= 7 
-  AND DATEDIFF(third_order_date, second_order_date) >= 30;`,
+WHERE (second_order_date - first_order_date) <= 7
+  AND (third_order_date - second_order_date) >= 30;`,
     starterCode: `-- Customers with 3 Purchases\n-- Write your solution here\nSELECT *\nFROM orders;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Purchase pattern detection (quick repeat within 7 days, then delayed 30+ days) identifies customer re-engagement behavior. This pattern often indicates trial-then-commitment behavior, useful for subscription conversion and lifecycle marketing triggers.`,
+    optimizationTips: [
+      "(date2 - date1) returns integer days in PostgreSQL, replacing DATEDIFF",
+      "Window COUNT(*) pre-filters to exactly 3 orders per user",
+      "Pivot via MAX(CASE WHEN rn = N) converts rows to columns",
+      "No self-joins needed \u2014 single scan with window functions"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "User with exactly 3 orders but wrong timing \u2014 excluded",
+      "User with 4+ orders \u2014 excluded by total_orders = 3",
+      "User with fewer than 3 orders \u2014 excluded",
+      "Orders on the same day \u2014 difference = 0 days",
+      "Exact boundary: 2nd order 7 days after 1st \u2014 <= 7 includes it"
     ]
   },
 
@@ -4708,44 +5777,57 @@ Each row represents an IP address from a user login attempt. Your task is to val
 CREATE TABLE logins (
   ip_address VARCHAR
 );
+
+INSERT INTO logins VALUES
+('192.168.1.1'),
+('255.255.255.255'),
+('0.0.0.0'),
+('256.1.2.3'),
+('1.02.3.4'),
+('1.2.3'),
+('abc.def.ghi.jkl'),
+('1.2.3.4.5'),
+('192.168.001.1');
 `,
     mySolution: null,
-    systemSolution: `SELECT 
+    systemSolution: `SELECT
   ip_address,
   CASE
-    --  Not exactly 3 dots
+    -- Not exactly 3 dots
     WHEN LENGTH(ip_address) - LENGTH(REPLACE(ip_address, '.', '')) != 3 THEN 0
-
-    --  Any part is non-numeric
-    WHEN NOT SUBSTRING_INDEX(ip_address, '.', 1) REGEXP '^[0-9]+$' THEN 0
-    WHEN NOT SUBSTRING_INDEX(SUBSTRING_INDEX(ip_address, '.', 2), '.', -1) REGEXP '^[0-9]+$' THEN 0
-    WHEN NOT SUBSTRING_INDEX(SUBSTRING_INDEX(ip_address, '.', 3), '.', -1) REGEXP '^[0-9]+$' THEN 0
-    WHEN NOT SUBSTRING_INDEX(ip_address, '.', -1) REGEXP '^[0-9]+$' THEN 0
-
-    --  Any part > 255
-    WHEN CAST(SUBSTRING_INDEX(ip_address, '.', 1) AS UNSIGNED) > 255 THEN 0
-    WHEN CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(ip_address, '.', 2), '.', -1) AS UNSIGNED) > 255 THEN 0
-    WHEN CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(ip_address, '.', 3), '.', -1) AS UNSIGNED) > 255 THEN 0
-    WHEN CAST(SUBSTRING_INDEX(ip_address, '.', -1) AS UNSIGNED) > 255 THEN 0
-
-    --  Leading zeros (length check method)
-    WHEN LENGTH(SUBSTRING_INDEX(ip_address, '.', 1)) != LENGTH(CAST(SUBSTRING_INDEX(ip_address, '.', 1) AS UNSIGNED)) THEN 0
-    WHEN LENGTH(SUBSTRING_INDEX(SUBSTRING_INDEX(ip_address, '.', 2), '.', -1)) != LENGTH(CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(ip_address, '.', 2), '.', -1) AS UNSIGNED)) THEN 0
-    WHEN LENGTH(SUBSTRING_INDEX(SUBSTRING_INDEX(ip_address, '.', 3), '.', -1)) != LENGTH(CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(ip_address, '.', 3), '.', -1) AS UNSIGNED)) THEN 0
-    WHEN LENGTH(SUBSTRING_INDEX(ip_address, '.', -1)) != LENGTH(CAST(SUBSTRING_INDEX(ip_address, '.', -1) AS UNSIGNED)) THEN 0
-
+    -- Any part is non-numeric
+    WHEN NOT SPLIT_PART(ip_address, '.', 1) ~ '^[0-9]+$' THEN 0
+    WHEN NOT SPLIT_PART(ip_address, '.', 2) ~ '^[0-9]+$' THEN 0
+    WHEN NOT SPLIT_PART(ip_address, '.', 3) ~ '^[0-9]+$' THEN 0
+    WHEN NOT SPLIT_PART(ip_address, '.', 4) ~ '^[0-9]+$' THEN 0
+    -- Any part > 255
+    WHEN CAST(SPLIT_PART(ip_address, '.', 1) AS INT) > 255 THEN 0
+    WHEN CAST(SPLIT_PART(ip_address, '.', 2) AS INT) > 255 THEN 0
+    WHEN CAST(SPLIT_PART(ip_address, '.', 3) AS INT) > 255 THEN 0
+    WHEN CAST(SPLIT_PART(ip_address, '.', 4) AS INT) > 255 THEN 0
+    -- Leading zeros
+    WHEN LENGTH(SPLIT_PART(ip_address, '.', 1)) != LENGTH(CAST(CAST(SPLIT_PART(ip_address, '.', 1) AS INT) AS VARCHAR)) THEN 0
+    WHEN LENGTH(SPLIT_PART(ip_address, '.', 2)) != LENGTH(CAST(CAST(SPLIT_PART(ip_address, '.', 2) AS INT) AS VARCHAR)) THEN 0
+    WHEN LENGTH(SPLIT_PART(ip_address, '.', 3)) != LENGTH(CAST(CAST(SPLIT_PART(ip_address, '.', 3) AS INT) AS VARCHAR)) THEN 0
+    WHEN LENGTH(SPLIT_PART(ip_address, '.', 4)) != LENGTH(CAST(CAST(SPLIT_PART(ip_address, '.', 4) AS INT) AS VARCHAR)) THEN 0
     -- Passed all checks
     ELSE 1
   END AS is_valid
 FROM logins;`,
     starterCode: `-- IPv4 Validator\n-- Write your solution here\nSELECT *\nFROM logins;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `IP address validation in pure SQL is useful for data cleansing ETL pipelines, firewall log analysis, and user login auditing. SPLIT_PART replaces MySQL's SUBSTRING_INDEX, while ~ replaces REGEXP for pattern matching in PostgreSQL.`,
+    optimizationTips: [
+      "SPLIT_PART(str, '.', N) replaces MySQL's SUBSTRING_INDEX in PostgreSQL",
+      "~ operator replaces REGEXP for regex matching in PostgreSQL",
+      "CAST(... AS INT) replaces CAST(... AS UNSIGNED)",
+      "Chained CASE WHEN provides short-circuit validation"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "IP with only 2 dots \u2014 invalid (not 4 parts)",
+      "Part with leading zeros like '01' \u2014 invalid",
+      "Part = '0' \u2014 valid (no leading zero issue)",
+      "Part > 255 \u2014 invalid",
+      "Non-numeric characters in any part \u2014 invalid"
     ]
   },
 
@@ -4781,35 +5863,48 @@ CREATE TABLE emp_details (
   emp_name VARCHAR,
   city VARCHAR
 );
+
+INSERT INTO emp_details VALUES
+('Alice', 'Delhi'),
+('Bob', 'Delhi'),
+('Charlie', 'Delhi'),
+('Dave', 'Delhi'),
+('Eve', 'Mumbai'),
+('Frank', 'Mumbai'),
+('Grace', 'Mumbai');
 `,
     mySolution: null,
     systemSolution: `WITH cte AS (
-    SELECT 
-         , ROW_NUMBER() OVER (PARTITION BY city ORDER BY city) AS rn
+    SELECT *, ROW_NUMBER() OVER (PARTITION BY city ORDER BY city) AS rn
     FROM emp_details
 ),
 cte2 AS (
-    SELECT 
-         , CEIL(rn / 3.0) AS team_group
+    SELECT *, CEIL(rn / 3.0) AS team_group
     FROM cte
 ),
 cte3 AS (
     SELECT city,
-           GROUP_CONCAT(emp_name ORDER BY emp_name SEPARATOR ',') AS team
+           STRING_AGG(emp_name, ',' ORDER BY emp_name) AS team
     FROM cte2
     GROUP BY city, team_group
 )
-SELECT ,
+SELECT *,
        CONCAT('Team', ROW_NUMBER() OVER (ORDER BY city)) AS team_name
 FROM cte3;`,
     starterCode: `-- Teams\n-- Write your solution here\nSELECT *\nFROM emp_details;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Automatic team formation by city with configurable group size (3) uses integer division for group assignment and STRING_AGG for member aggregation. This pattern applies to event planning, sports league grouping, and workforce organization.`,
+    optimizationTips: [
+      "STRING_AGG(name, ',' ORDER BY name) replaces GROUP_CONCAT in PostgreSQL",
+      "CEIL(rn / 3.0) assigns sequential group numbers (1, 2, 3...)",
+      "ROW_NUMBER partitioned by city assigns per-city sequence",
+      "Final ROW_NUMBER over city order generates global team names"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "City with fewer than 3 people \u2014 forms a smaller team",
+      "City with exactly 3 people \u2014 one full team",
+      "City with 4 people \u2014 team of 3 + team of 1",
+      "Empty city \u2014 no teams generated",
+      "Duplicate employee names in same city"
     ]
   },
 
@@ -4851,35 +5946,41 @@ CREATE TABLE transactions (
   dt VARCHAR(19),
   customer VARCHAR(30),
   type VARCHAR(4),
-  amount DECIMAL(4,2),
+  amount DECIMAL(10,2),
   status VARCHAR(9)
 );
+
+INSERT INTO transactions VALUES
+('2021-07-01 10:00:00', 'Alice', 'BUY', 50.00, 'COMPLETED'),
+('2021-07-02 11:00:00', 'Alice', 'SELL', 30.00, 'COMPLETED'),
+('2021-07-03 09:00:00', 'Alice', 'BUY', 20.00, 'CANCELED'),
+('2021-07-04 14:00:00', 'Bob', 'BUY', 100.00, 'COMPLETED'),
+('2021-07-05 15:00:00', 'Bob', 'SELL', 60.00, 'PENDING'),
+('2021-07-06 16:00:00', 'Bob', 'BUY', 40.00, 'CANCELED'),
+('2021-06-28 08:00:00', 'Alice', 'BUY', 80.00, 'COMPLETED');
 `,
     mySolution: null,
     systemSolution: `WITH july_tx AS (
-    SELECT 
+    SELECT *
     FROM transactions
-    WHERE dt >= '2021-07-01' 
-      AND dt <  '2021-08-01'
+    WHERE dt >= '2021-07-01'
+      AND dt < '2021-08-01'
 ),
 customer_agg AS (
     SELECT
         customer,
-        SUM(CASE WHEN type = 'BUY'  THEN 1 ELSE 0 END) AS buy,
+        SUM(CASE WHEN type = 'BUY' THEN 1 ELSE 0 END) AS buy,
         SUM(CASE WHEN type = 'SELL' THEN 1 ELSE 0 END) AS sell,
         SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END) AS completed,
-        SUM(CASE WHEN status = 'PENDING'   THEN 1 ELSE 0 END) AS pending,
-        SUM(CASE WHEN status = 'CANCELED'  THEN 1 ELSE 0 END) AS canceled,
+        SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END) AS pending,
+        SUM(CASE WHEN status = 'CANCELED' THEN 1 ELSE 0 END) AS canceled,
         ROUND(
             SUM(
                 CASE
                     WHEN status = 'PENDING' THEN 0
-                    WHEN status = 'COMPLETED' AND type = 'BUY'
-                        THEN amount
-                    WHEN status = 'COMPLETED' AND type = 'SELL'
-                        THEN 0.10  amount
-                    WHEN status = 'CANCELED'
-                        THEN -0.01  amount
+                    WHEN status = 'COMPLETED' AND type = 'BUY' THEN amount
+                    WHEN status = 'COMPLETED' AND type = 'SELL' THEN 0.10 * amount
+                    WHEN status = 'CANCELED' THEN -0.01 * amount
                 END
             ),
             2
@@ -4887,18 +5988,23 @@ customer_agg AS (
     FROM july_tx
     GROUP BY customer
 )
-SELECT
-    customer, buy, sell, completed, pending, canceled, total
+SELECT customer, buy, sell, completed, pending, canceled, total
 FROM customer_agg
-order by total desc;`,
+ORDER BY total DESC;`,
     starterCode: `-- Marketing Analytics\n-- Write your solution here\nSELECT *\nFROM transactions;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `E-commerce revenue calculation with multiple transaction types (BUY/SELL) and statuses (COMPLETED/PENDING/CANCELED) models real marketplace economics. SELL transactions generate 10% commission revenue, while CANCELED transactions incur 1% penalty deductions.`,
+    optimizationTips: [
+      "Nested CASE WHEN handles type + status combinations for revenue",
+      "CTE filters to July 2021 before aggregation",
+      "ROUND(SUM(...), 2) ensures currency precision",
+      "String date comparison works for ISO format dates"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "Transaction outside July 2021 \u2014 excluded by CTE filter",
+      "PENDING transaction \u2014 counted but contributes 0 revenue",
+      "CANCELED BUY \u2014 deducts 1% of amount from total",
+      "Customer with only PENDING transactions \u2014 total = 0",
+      "Transaction on July 31 23:59:59 \u2014 included"
     ]
   },
 
@@ -4927,14 +6033,13 @@ order by total desc;`,
         ]
       }
     ],
-    sampleData: `DROP TABLE IF EXISTS users;
+    sampleData: `DROP TABLE IF EXISTS usage_data;
+DROP TABLE IF EXISTS users;
 
 CREATE TABLE users (
   user_id VARCHAR,
   registration_date DATE
 );
-
-DROP TABLE IF EXISTS usage_data;
 
 CREATE TABLE usage_data (
   user_id VARCHAR,
@@ -4942,47 +6047,66 @@ CREATE TABLE usage_data (
   location VARCHAR,
   time_spent INTEGER
 );
+
+INSERT INTO users VALUES
+('U1', '2024-01-15'),
+('U2', '2024-01-20'),
+('U3', '2024-02-01');
+
+INSERT INTO usage_data VALUES
+('U1', '2024-01-20', 'web', 20),
+('U1', '2024-01-25', 'app', 15),
+('U1', '2024-02-20', 'web', 35),
+('U1', '2024-03-20', 'app', 40),
+('U2', '2024-02-01', 'web', 10),
+('U2', '2024-02-10', 'app', 25),
+('U3', '2024-02-15', 'web', 50);
 `,
     mySolution: null,
     systemSolution: `WITH consolidated_usage AS (
-    SELECT 
-        u.user_id, 
-        DATE_FORMAT(u.registration_date, '%Y-%m') AS registration_month,  
-        SUM(CASE 
-            WHEN usg.usage_date <= DATE_ADD(u.registration_date, INTERVAL 1 MONTH) THEN usg.time_spent 
-            ELSE 0 
+    SELECT
+        u.user_id,
+        TO_CHAR(u.registration_date, 'YYYY-MM') AS registration_month,
+        SUM(CASE
+            WHEN usg.usage_date <= u.registration_date + INTERVAL '1 month' THEN usg.time_spent
+            ELSE 0
         END) AS m1_time_spent,
-        SUM(CASE 
-            WHEN usg.usage_date > DATE_ADD(u.registration_date, INTERVAL 1 MONTH) 
-                 AND usg.usage_date <= DATE_ADD(u.registration_date, INTERVAL 2 MONTH) THEN usg.time_spent 
-            ELSE 0 
+        SUM(CASE
+            WHEN usg.usage_date > u.registration_date + INTERVAL '1 month'
+                 AND usg.usage_date <= u.registration_date + INTERVAL '2 months' THEN usg.time_spent
+            ELSE 0
         END) AS m2_time_spent,
-        SUM(CASE 
-            WHEN usg.usage_date > DATE_ADD(u.registration_date, INTERVAL 2 MONTH) 
-                 AND usg.usage_date <= DATE_ADD(u.registration_date, INTERVAL 3 MONTH) THEN usg.time_spent 
-            ELSE 0 
+        SUM(CASE
+            WHEN usg.usage_date > u.registration_date + INTERVAL '2 months'
+                 AND usg.usage_date <= u.registration_date + INTERVAL '3 months' THEN usg.time_spent
+            ELSE 0
         END) AS m3_time_spent
     FROM users u
-    LEFT JOIN usage_data usg ON u.user_id = usg.user_id  
-    GROUP BY u.user_id, DATE_FORMAT(u.registration_date, '%Y-%m')
+    LEFT JOIN usage_data usg ON u.user_id = usg.user_id
+    GROUP BY u.user_id, TO_CHAR(u.registration_date, 'YYYY-MM')
 )
-
-SELECT 
-    registration_month, 
-    COUNT() AS total_users,  
-    IFNULL(ROUND(SUM(CASE WHEN m1_time_spent >= 30 THEN 1 ELSE 0 END)  100.0 / COUNT(), 2), 0) AS m1_retention,  
-    IFNULL(ROUND(SUM(CASE WHEN m2_time_spent >= 30 THEN 1 ELSE 0 END)  100.0 / COUNT(), 2), 0) AS m2_retention,  
-    IFNULL(ROUND(SUM(CASE WHEN m3_time_spent >= 30 THEN 1 ELSE 0 END)  100.0 / COUNT(), 2), 0) AS m3_retention  
-FROM consolidated_usage  
+SELECT
+    registration_month,
+    COUNT(*) AS total_users,
+    COALESCE(ROUND(SUM(CASE WHEN m1_time_spent >= 30 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2), 0) AS m1_retention,
+    COALESCE(ROUND(SUM(CASE WHEN m2_time_spent >= 30 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2), 0) AS m2_retention,
+    COALESCE(ROUND(SUM(CASE WHEN m3_time_spent >= 30 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2), 0) AS m3_retention
+FROM consolidated_usage
 GROUP BY registration_month;`,
     starterCode: `-- Cohort Retention\n-- Write your solution here\nSELECT *\nFROM users;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Cohort retention analysis tracks what percentage of users from each registration month remain 'engaged' (>= 30 minutes) in months 1-3 post-registration. This is a core product analytics metric for measuring onboarding effectiveness and long-term user value.`,
+    optimizationTips: [
+      "TO_CHAR(date, 'YYYY-MM') replaces MySQL's DATE_FORMAT for month grouping",
+      "'+ INTERVAL N months' replaces DATE_ADD in PostgreSQL",
+      "COALESCE replaces IFNULL for NULL handling",
+      "LEFT JOIN preserves users with no usage data (0 time spent)"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "User with no usage data \u2014 all retention periods = 0 minutes",
+      "User active in month 1 but not months 2-3",
+      "Usage exactly on the boundary date \u2014 included in which month?",
+      "Registration cohort with single user",
+      "User with exactly 30 minutes \u2014 meets threshold (>=)"
     ]
   },
 
@@ -5040,7 +6164,9 @@ Return all possible valid routes, sorted by user_id and shortest duration.`,
         ]
       }
     ],
-    sampleData: `DROP TABLE IF EXISTS users;
+    sampleData: `DROP TABLE IF EXISTS flights;
+DROP TABLE IF EXISTS airports;
+DROP TABLE IF EXISTS users;
 
 CREATE TABLE users (
   user_id INT,
@@ -5048,22 +6174,35 @@ CREATE TABLE users (
   destination_city VARCHAR
 );
 
-DROP TABLE IF EXISTS airports;
-
 CREATE TABLE airports (
   port_code VARCHAR,
   city_name VARCHAR
 );
 
-DROP TABLE IF EXISTS flights;
-
 CREATE TABLE flights (
   flight_id VARCHAR,
   start_port VARCHAR,
   end_port VARCHAR,
-  start_time DATETIME,
-  end_time DATETIME
+  start_time TIMESTAMP,
+  end_time TIMESTAMP
 );
+
+INSERT INTO users VALUES
+(1, 'Delhi', 'Mumbai'),
+(2, 'Delhi', 'Chennai');
+
+INSERT INTO airports VALUES
+('DEL', 'Delhi'),
+('BOM', 'Mumbai'),
+('MAA', 'Chennai'),
+('BLR', 'Bangalore');
+
+INSERT INTO flights VALUES
+('F1', 'DEL', 'BOM', '2024-01-01 08:00:00', '2024-01-01 10:00:00'),
+('F2', 'DEL', 'BLR', '2024-01-01 09:00:00', '2024-01-01 12:00:00'),
+('F3', 'BLR', 'MAA', '2024-01-01 13:00:00', '2024-01-01 14:30:00'),
+('F4', 'DEL', 'MAA', '2024-01-01 07:00:00', '2024-01-01 10:30:00'),
+('F5', 'BLR', 'BOM', '2024-01-01 13:00:00', '2024-01-01 14:00:00');
 `,
     mySolution: null,
     systemSolution: `WITH user_start_ports AS (
@@ -5071,63 +6210,57 @@ CREATE TABLE flights (
     FROM users u
     JOIN airports a ON a.city_name = u.source_city
 ),
-
--- Get all airports for each user's destination city
 user_end_ports AS (
     SELECT u.user_id, a.port_code, a.city_name AS end_city
     FROM users u
     JOIN airports a ON a.city_name = u.destination_city
 ),
-
--- Get all valid direct flights for users from any source airport to any destination airport
 direct_routes AS (
-    SELECT 
+    SELECT
         sp.user_id,
         sp.start_city AS trip_start_city,
-        NULL AS middle_city,  -- Direct flights have no stopover city
+        NULL AS middle_city,
         ep.end_city AS trip_end_city,
-        TIMESTAMPDIFF(MINUTE, f.start_time, f.end_time) AS trip_time , -- Total time of journey
-        CAST(f.flight_id AS CHAR) AS flight_ids -- Only one flight ID
+        EXTRACT(EPOCH FROM (f.end_time - f.start_time)) / 60 AS trip_time,
+        CAST(f.flight_id AS VARCHAR) AS flight_ids
     FROM flights f
     JOIN user_start_ports sp ON f.start_port = sp.port_code
     JOIN user_end_ports ep ON f.end_port = ep.port_code AND sp.user_id = ep.user_id
 ),
-
--- Get all valid one-stop flight routes
--- A valid connection must: 
--- 1. land and depart from the same airport
--- 2. second flight must start after (or at) the end time of the first flight
--- 3. total trip must start from user's source city and end at their destination city
 one_stop_routes AS (
-    SELECT 
+    SELECT
         sp.user_id,
         sp.start_city AS trip_start_city,
-        mid.city_name AS middle_city,  -- Stopover city
+        mid.city_name AS middle_city,
         ep.end_city AS trip_end_city,
-        TIMESTAMPDIFF(MINUTE, f1.start_time, f2.end_time) AS trip_time,  -- Total time of journey
-        CONCAT(f1.flight_id, ';', f2.flight_id) AS flight_ids  -- Combined flight IDs
+        EXTRACT(EPOCH FROM (f2.end_time - f1.start_time)) / 60 AS trip_time,
+        CONCAT(f1.flight_id, ';', f2.flight_id) AS flight_ids
     FROM flights f1
-    JOIN flights f2 
+    JOIN flights f2
         ON f1.end_port = f2.start_port
         AND f1.end_time <= f2.start_time
     JOIN user_start_ports sp ON f1.start_port = sp.port_code
     JOIN user_end_ports ep ON f2.end_port = ep.port_code AND sp.user_id = ep.user_id
-    JOIN airports mid ON f1.end_port = mid.port_code  -- Determine middle city from flight connection
+    JOIN airports mid ON f1.end_port = mid.port_code
 )
-
--- Combine direct and one-stop routes
-SELECT  FROM direct_routes
+SELECT * FROM direct_routes
 UNION ALL
-SELECT  FROM one_stop_routes
+SELECT * FROM one_stop_routes
 ORDER BY user_id, trip_time;`,
     starterCode: `-- Flight Planner System\n-- Write your solution here\nSELECT *\nFROM users;`,
-    businessImpact: `This analysis enables data-driven decisions and operational efficiency improvements.`,
-    optimizationTips: [],
+    businessImpact: `Flight route planning with direct and one-stop connections models real travel search engines. The query joins users' city preferences to airport codes, finds matching flights, and calculates total trip time including layovers for optimal route recommendation.`,
+    optimizationTips: [
+      "EXTRACT(EPOCH FROM interval) / 60 replaces TIMESTAMPDIFF(MINUTE) in PostgreSQL",
+      "CAST(... AS VARCHAR) replaces CAST(... AS CHAR) in PostgreSQL",
+      "TIMESTAMP replaces DATETIME in PostgreSQL",
+      "UNION ALL combines direct and one-stop routes efficiently"
+    ],
     edgeCases: [
-      "Handle NULL values appropriately",
-      "Check for duplicate records",
-      "Verify JOIN conditions",
-      "Test with empty result sets"
+      "No direct flight exists \u2014 only one-stop routes returned",
+      "Connection flight departs before first flight lands \u2014 invalid, excluded",
+      "Multiple airports in same city \u2014 all combinations considered",
+      "No valid route for a user \u2014 not in result",
+      "Layover of 0 minutes \u2014 valid (f1.end_time = f2.start_time)"
     ]
   },
 
@@ -5197,7 +6330,7 @@ INSERT INTO orders VALUES
 (105, 2, '2024-01-02', 3),
 (106, 3, '2024-01-01', 10);`,
     mySolution: null,
-        systemSolution: `WITH cte AS (
+    systemSolution: `WITH cte AS (
   SELECT o.*,
     SUM(quantity_requested) OVER(PARTITION BY o.product_id ORDER BY order_date) AS running_requested_qty,
     p.available_quantity,
@@ -5293,7 +6426,7 @@ INSERT INTO orders VALUES
 (10, 101, '2024-04-01'),
 (11, 102, '2024-04-10');`,
     mySolution: null,
-        systemSolution: `WITH cte AS (
+    systemSolution: `WITH cte AS (
   SELECT DISTINCT 
     EXTRACT(YEAR FROM order_date) AS year, 
     EXTRACT(MONTH FROM order_date) AS month, 
@@ -5390,7 +6523,7 @@ INSERT INTO service_status VALUES
 ('Cache', 'down', '2024-01-01 10:07:00'),
 ('Cache', 'up', '2024-01-01 10:08:00');`,
     mySolution: null,
-        systemSolution: `WITH consecutive_down AS (
+    systemSolution: `WITH consecutive_down AS (
   SELECT 
     service_name,
     updated_time,
@@ -5499,7 +6632,7 @@ INSERT INTO leave_requests VALUES
 (5, 2, '2024-02-15', '2024-02-16'),
 (6, 3, '2024-01-10', '2024-01-12');`,
     mySolution: null,
-        systemSolution: `WITH RECURSIVE cte AS (
+    systemSolution: `WITH RECURSIVE cte AS (
   SELECT lr.*, e.leave_balance_from_2023,
     EXTRACT(MONTH FROM leave_start_date) AS leave_start_month,
     (leave_end_date - leave_start_date) + 1 AS leave_days,
@@ -5614,7 +6747,7 @@ INSERT INTO rating_table VALUES
 ('2024-01-01 10:00:00', 'D3', 13, 2),
 ('2024-01-01 11:00:00', 'D3', 14, 3);`,
     mySolution: null,
-        systemSolution: `WITH RankedRatings AS (
+    systemSolution: `WITH RankedRatings AS (
   SELECT 
     driver_id, 
     trip_id,
@@ -5720,7 +6853,7 @@ INSERT INTO items VALUES
 (8, 4),
 (9, 1);`,
     mySolution: null,
-        systemSolution: `WITH RECURSIVE cte AS (
+    systemSolution: `WITH RECURSIVE cte AS (
   SELECT id, weight, weight AS running_sum, 1 AS box_number 
   FROM items
   WHERE id = 1
@@ -5838,7 +6971,7 @@ INSERT INTO rides VALUES
 INSERT INTO calendar_dim 
 SELECT generate_series('2023-01-01'::date, '2023-12-31'::date, '1 day'::interval)::date;`,
     mySolution: null,
-        systemSolution: `WITH cal AS (
+    systemSolution: `WITH cal AS (
   SELECT 
     EXTRACT(MONTH FROM cal_date) AS cal_month, 
     MAX(cal_date) AS month_end_date
@@ -5941,7 +7074,7 @@ INSERT INTO detailed_oos_events VALUES
 ('PROD2', 1, '2024-01-04'),
 ('PROD2', 1, '2024-01-11');`,
     mySolution: null,
-        systemSolution: `WITH RECURSIVE ranked_data AS (
+    systemSolution: `WITH RECURSIVE ranked_data AS (
   SELECT 
     master_id,
     marketplace_id,
