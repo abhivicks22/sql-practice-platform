@@ -16,6 +16,7 @@ import {
   TrendingUp,
   Sparkles,
   Loader2,
+  ListChecks,
 } from "lucide-react"
 import type { Question, Difficulty } from "@/lib/sql-data"
 import type { EdgeCase } from "@/lib/sql-data"
@@ -173,11 +174,10 @@ export function LeftPanel({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium transition-all border-b-2 ${
-                activeTab === tab.id
-                  ? "border-theme text-theme"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium transition-all border-b-2 ${activeTab === tab.id
+                ? "border-theme text-theme"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
             >
               <Icon className="h-3.5 w-3.5" />
               {tab.label}
@@ -224,6 +224,21 @@ export function LeftPanel({
                 </div>
               ))}
             </div>
+
+
+            {question.expectedOutput && (
+              <div className="space-y-3 pt-2">
+                <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <ListChecks className="h-3.5 w-3.5" />
+                  Expected Output
+                </h3>
+                <div className="glass-panel p-3 overflow-x-auto bg-black/20">
+                  <pre className="font-mono text-xs leading-relaxed text-foreground/90 whitespace-pre">
+                    {question.expectedOutput}
+                  </pre>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -333,11 +348,10 @@ export function LeftPanel({
                   <Circle className="h-4 w-4 text-muted-foreground shrink-0" />
                 )}
                 <span
-                  className={`text-sm ${
-                    edgeCaseChecks[i]
-                      ? "text-muted-foreground line-through"
-                      : "text-foreground/90"
-                  }`}
+                  className={`text-sm ${edgeCaseChecks[i]
+                    ? "text-muted-foreground line-through"
+                    : "text-foreground/90"
+                    }`}
                 >
                   {typeof ec === "object" && ec !== null && "text" in ec ? ec.text : String(ec)}
                 </span>
@@ -346,6 +360,6 @@ export function LeftPanel({
           </div>
         )}
       </div>
-    </div>
+    </div >
   )
 }

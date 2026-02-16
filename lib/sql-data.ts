@@ -14,6 +14,7 @@ export interface SQLQuestion {
   sampleData: string;
   mySolution: string | null;
   systemSolution: string;
+  expectedOutput?: string;
   starterCode: string;
   businessImpact: string;
   optimizationTips: string[];
@@ -48,6 +49,7 @@ export interface Question {
   businessImpact: string;
   optimizationTips: string[];
   edgeCases: EdgeCase[];
+  expectedOutput?: string;
   starterCode: string;
 }
 
@@ -105,7 +107,10 @@ WHERE (LOWER(review_text) LIKE '% excellent%' OR LOWER(review_text) LIKE '% amaz
   AND LOWER(review_text) NOT LIKE '%not excellent%'
   AND LOWER(review_text) NOT LIKE '%not amazing%'
 ORDER BY review_id ASC;`,
-    starterCode: `-- Product Reviews\n-- Write your solution here\nSELECT *\nFROM product_reviews;`,
+    starterCode: `-- Product Reviews
+-- Write your solution here
+SELECT *
+FROM product_reviews;`,
     businessImpact: `Sentiment analysis on product reviews helps identify top-performing products, detect quality issues early, and guide marketing strategies. Filtering out negated sentiments (like "not excellent") prevents false positives that could skew customer satisfaction metrics.`,
     optimizationTips: [
       "Create a full-text search index on review_text for faster LIKE pattern matching",
@@ -119,7 +124,13 @@ ORDER BY review_id ASC;`,
       "Review containing both 'not excellent' and 'amazing' — should be excluded",
       "Empty review_text or NULL values",
       "Review with 'not amazing but excellent' — should be excluded due to 'not amazing'"
-    ]
+    ],
+    expectedOutput: `+-----------+------------+------------------------------------------+
+| review_id | product_id | review_text                              |
++-----------+------------+------------------------------------------+
+| 1         | 101        | The product is amazing!                  |
+| 3         | 103        | Excellent value for money.               |
++-----------+------------+------------------------------------------+`
   },
 
   {
@@ -167,7 +178,9 @@ FROM customers;`,
     Email,
     SUBSTRING(Email FROM POSITION('@' IN Email) + 1) AS domain_name
 FROM customers;`,
-    starterCode: `-- Domain Names\n-- Write your solution here\nSELECT 1;`,
+    starterCode: `-- Domain Names
+-- Write your solution here
+SELECT 1;`,
     businessImpact: `Email domain analysis helps segment customers by email provider (Gmail, Yahoo, corporate domains), enabling targeted communication strategies, identifying B2B vs B2C customers, and detecting suspicious sign-up patterns from disposable email domains.`,
     optimizationTips: [
       "Use PostgreSQL's SPLIT_PART(Email, '@', 2) as a simpler alternative to SUBSTRING + POSITION",
@@ -179,7 +192,17 @@ FROM customers;`,
       "NULL or empty email values",
       "Email with no domain part (malformed data)",
       "Case sensitivity: 'Gmail.com' vs 'gmail.com'"
-    ]
+    ],
+    expectedOutput: `+-------------------+-----------------+
+| email             | domain_name     |
++-------------------+-----------------+
+| alice@gmail.com   | gmail.com       |
+| bob@yahoo.com     | yahoo.com       |
+| carol@outlook.com | outlook.com     |
+| dave@gmail.com    | gmail.com       |
+| eve@company.org   | company.org     |
+| frank@yahoo.com   | yahoo.com       |
++-------------------+-----------------+`
   },
 
   {
@@ -241,7 +264,18 @@ INSERT INTO orders VALUES
 (7, '2024-03-20', 2),
 (8, '2024-04-05', 2);
 `,
-    mySolution: null,
+    mySolution: `WITH price_range AS (
+    SELECT *,
+           COALESCE(LEAD(price_date) OVER (PARTITION BY product_id ORDER BY price_date) - INTERVAL '1 day', '9999-12-31') AS price_end_date
+    FROM products
+)
+SELECT p.product_id,
+       SUM(p.price) AS total_sales
+FROM orders o
+INNER JOIN price_range p ON o.product_id = p.product_id
+    AND o.order_date BETWEEN p.price_date AND p.price_end_date
+GROUP BY p.product_id
+ORDER BY p.product_id ASC;`,
     systemSolution: `WITH price_range AS (
     SELECT *,
            COALESCE(LEAD(price_date) OVER (PARTITION BY product_id ORDER BY price_date) - INTERVAL '1 day', '9999-12-31') AS price_end_date
@@ -254,7 +288,10 @@ INNER JOIN price_range p ON o.product_id = p.product_id
     AND o.order_date BETWEEN p.price_date AND p.price_end_date
 GROUP BY p.product_id
 ORDER BY p.product_id ASC;`,
-    starterCode: `-- Dynamic Pricing\n-- Write your solution here\nSELECT *\nFROM products;`,
+    starterCode: `-- Dynamic Pricing
+-- Write your solution here
+SELECT *
+FROM products;`,
     businessImpact: `Dynamic pricing analysis helps e-commerce platforms optimize revenue by tracking how price changes affect order volume. Understanding total sales at time-of-purchase prices enables accurate revenue recognition and helps pricing teams measure the ROI of price adjustments.`,
     optimizationTips: [
       "Index products on (product_id, price_date) for efficient LEAD window function",
@@ -268,7 +305,13 @@ ORDER BY p.product_id ASC;`,
       "Multiple price changes on the same day for a product",
       "Order date before any price was set for that product",
       "Product with no orders at all"
-    ]
+    ],
+    expectedOutput: `+------------+-------------+
+| product_id | total_sales |
++------------+-------------+
+| 1          | 550         |
+| 2          | 160         |
++------------+-------------+`
   },
 
   {
@@ -324,7 +367,10 @@ from employee e2
 where e1.department != e2.department
 )
 ORDER BY emp_id ;`,
-    starterCode: `-- Highly Paid Employees\n-- Write your solution here\nSELECT *\nFROM employee;`,
+    starterCode: `-- Highly Paid Employees
+-- Write your solution here
+SELECT *
+FROM employee;`,
     businessImpact: `Identifying employees earning above the cross-department average helps HR detect salary inequities, justify compensation adjustments, and ensure competitive pay across departments without bias from within-department grouping.`,
     optimizationTips: [
       "Correlated subquery recalculates for each row — consider CTE with pre-computed averages per department exclusion",
@@ -337,7 +383,16 @@ ORDER BY emp_id ;`,
       "All employees in the same department — no other departments to average",
       "NULL salary values",
       "Tied salary exactly equal to the average — should not be included (strictly greater)"
-    ]
+    ],
+    expectedOutput: `+--------+--------+-------------+
+| emp_id | salary | department  |
++--------+--------+-------------+
+| 1      | 80000  | Engineering |
+| 2      | 90000  | Engineering |
+| 4      | 70000  | Marketing   |
+| 6      | 95000  | Sales       |
+| 8      | 75000  | Sales       |
++--------+--------+-------------+`
   },
 
   {
@@ -427,7 +482,10 @@ SELECT 'Overall' AS location_id,
   SUM(excess_insufficient_value) AS excess_insufficient_value
 FROM cte
 ORDER BY location_id;`,
-    starterCode: `-- Excess/insufficient Inventory\n-- Write your solution here\nSELECT *\nFROM inventory;`,
+    starterCode: `-- Excess/insufficient Inventory
+-- Write your solution here
+SELECT *
+FROM inventory;`,
     businessImpact: `Inventory excess/shortage analysis at warehouse level directly impacts working capital management, storage costs, and fulfillment rates. Identifying overstocked locations enables redistribution, while understocked locations signal urgent replenishment needs.`,
     optimizationTips: [
       "Pre-aggregate inventory differences before joining with products for better performance",
@@ -441,7 +499,15 @@ ORDER BY location_id;`,
       "Product in inventory but not in products table (missing unit_cost)",
       "Negative inventory levels (data quality issue)",
       "UNION ALL ordering: 'Overall' sorts alphabetically vs numeric location_ids"
-    ]
+    ],
+    expectedOutput: `+-------------+-------------------------+---------------------------+
+| location_id | excess_insufficient_qty | excess_insufficient_value |
++-------------+-------------------------+---------------------------+
+| 1           | 0                       | 190.00                    |
+| 2           | 40                      | 850.00                    |
+| 3           | 20                      | 800.00                    |
+| Overall     | 60                      | 1840.00                   |
++-------------+-------------------------+---------------------------+`
   },
 
   {
@@ -506,7 +572,10 @@ LEFT JOIN cte ON orders.customer_name = cte.customer_name
 WHERE orders.customer_name IN (SELECT DISTINCT customer_name FROM cte)
 GROUP BY orders.customer_name
 ORDER BY total_order_value;`,
-    starterCode: `-- Zomato Membership\n-- Write your solution here\nSELECT *\nFROM orders;`,
+    starterCode: `-- Zomato Membership
+-- Write your solution here
+SELECT *
+FROM orders;`,
     businessImpact: `Identifying high-frequency ordering customers helps food delivery platforms target premium membership offers effectively. Understanding same-day multi-order behavior reveals power users who drive disproportionate revenue and are ideal candidates for loyalty programs.`,
     optimizationTips: [
       "Index on (customer_name, order_date) for efficient GROUP BY",
@@ -520,7 +589,14 @@ ORDER BY total_order_value;`,
       "Customer with 3+ orders on one day but only 1 on others",
       "NULL order_value \u2014 affects SUM calculations",
       "Same customer_name, different customers (name collision)"
-    ]
+    ],
+    expectedOutput: `+---------------+-------------------+-------------+
+| customer_name | total_order_value | order_value |
++---------------+-------------------+-------------+
+| Dave          | 500               | 500         |
+| Bob           | 1150              | 800         |
+| Alice         | 1250              | 800         |
++---------------+-------------------+-------------+`
   },
 
   {
@@ -584,7 +660,10 @@ SELECT COUNT(*) AS no_of_emp_inside
 FROM cte
 WHERE action = 'in'
   AND '2019-04-01 19:05:00' BETWEEN created_at AND next_created_at;`,
-    starterCode: `-- Employees Inside Office (Part 1)\n-- Write your solution here\nSELECT *\nFROM employee_record;`,
+    starterCode: `-- Employees Inside Office (Part 1)
+-- Write your solution here
+SELECT *
+FROM employee_record;`,
     businessImpact: `Real-time office occupancy tracking helps facility management optimize HVAC/lighting, ensure fire safety compliance with headcount limits, and provide data for hybrid work policies by understanding peak office usage times.`,
     optimizationTips: [
       "LEAD window function pairs each 'in' with its next 'out' efficiently",
@@ -598,7 +677,12 @@ WHERE action = 'in'
       "Employee with multiple in/out cycles on the same day",
       "Query timestamp exactly matches an in or out event",
       "Employee who checked in exactly at the query timestamp"
-    ]
+    ],
+    expectedOutput: `+------------------+
+| no_of_emp_inside |
++------------------+
+| 2                |
++------------------+`
   },
 
   {
@@ -666,7 +750,13 @@ INSERT INTO purchases VALUES
 (8, 6, 2),
 (9, 3, 4);
 `,
-    mySolution: null,
+    mySolution: `SELECT
+    category,
+    COALESCE(MIN(CASE WHEN pur.product_id IS NOT NULL THEN price END), 0) AS price
+FROM products p
+LEFT JOIN purchases pur ON p.id = pur.product_id AND pur.stars IN (4, 5)
+GROUP BY category
+ORDER BY category;`,
     systemSolution: `SELECT
     category,
     COALESCE(MIN(CASE WHEN pur.product_id IS NOT NULL THEN price END), 0) AS price
@@ -674,7 +764,10 @@ FROM products p
 LEFT JOIN purchases pur ON p.id = pur.product_id AND pur.stars IN (4, 5)
 GROUP BY category
 ORDER BY category;`,
-    starterCode: `-- Lowest Price\n-- Write your solution here\nSELECT *\nFROM products;`,
+    starterCode: `-- Lowest Price
+-- Write your solution here
+SELECT *
+FROM products;`,
     businessImpact: `Finding the cheapest well-rated product per category helps e-commerce platforms highlight "best value" items, guide pricing strategy, and identify entry-level products that drive customer acquisition into each category.`,
     optimizationTips: [
       "LEFT JOIN ensures categories with no 4+ star products still appear (as 0)",
@@ -688,7 +781,14 @@ ORDER BY category;`,
       "Product with both high and low star ratings \u2014 still qualifies",
       "Multiple products with same lowest price in a category",
       "Product with no purchases (never bought)"
-    ]
+    ],
+    expectedOutput: `+-------------+-------+
+| category    | price |
++-------------+-------+
+| Books       | 0     |
+| Clothing    | 50    |
+| Electronics | 500   |
++-------------+-------+`
   },
 
   {
@@ -731,7 +831,22 @@ INSERT INTO expenditures VALUES
 ('Eve', 4000, 'Mastercard'),
 ('Eve', 5000, 'Visa');
 `,
-    mySolution: null,
+    mySolution: `WITH mastercard AS (
+SELECT user_name, SUM(expenditure) AS expenditure
+FROM expenditures
+WHERE card_company = 'Mastercard'
+GROUP BY user_name
+),
+non_mastercard AS (
+SELECT user_name, SUM(expenditure) AS expenditure
+FROM expenditures
+WHERE card_company != 'Mastercard'
+GROUP BY user_name
+)
+SELECT m.user_name, m.expenditure AS mastercard_expense, nm.expenditure AS other_expense
+FROM mastercard m
+INNER JOIN non_mastercard nm ON m.user_name = nm.user_name
+WHERE nm.expenditure > m.expenditure;`,
     systemSolution: `WITH mastercard AS (
 SELECT user_name, SUM(expenditure) AS expenditure
 FROM expenditures
@@ -748,7 +863,10 @@ SELECT m.user_name, m.expenditure AS mastercard_expense, nm.expenditure AS other
 FROM mastercard m
 INNER JOIN non_mastercard nm ON m.user_name = nm.user_name
 WHERE nm.expenditure > m.expenditure;`,
-    starterCode: `-- Expenses Excluding MasterCard\n-- Write your solution here\nSELECT *\nFROM expenditures;`,
+    starterCode: `-- Expenses Excluding MasterCard
+-- Write your solution here
+SELECT *
+FROM expenditures;`,
     businessImpact: `Cross-card spending analysis helps credit card companies identify customers whose non-Mastercard spending exceeds their Mastercard usage, enabling targeted offers and incentives to capture more wallet share from competing card issuers.`,
     optimizationTips: [
       "Two separate CTEs are cleaner than conditional aggregation for this comparison",
@@ -762,7 +880,14 @@ WHERE nm.expenditure > m.expenditure;`,
       "User with equal Mastercard and other card expenses \u2014 not included (strictly greater)",
       "User with multiple transactions on same card company",
       "NULL expenditure values"
-    ]
+    ],
+    expectedOutput: `+-----------+--------------------+---------------+
+| user_name | mastercard_expense | other_expense |
++-----------+--------------------+---------------+
+| Alice     | 5000               | 7000          |
+| Carol     | 3000               | 3500          |
+| Eve       | 4000               | 5000          |
++-----------+--------------------+---------------+`
   },
 
   {
@@ -810,7 +935,26 @@ INSERT INTO orders VALUES
 (12, 2, '2023-06-15', 2, 350),
 (13, 3, '2024-06-20', 2, 400);
 `,
-    mySolution: null,
+    mySolution: `WITH cte AS (
+SELECT product_id,
+  EXTRACT(MONTH FROM order_date) AS order_month,
+  EXTRACT(YEAR FROM order_date) AS order_year,
+  SUM(sales) AS sales
+FROM orders
+GROUP BY product_id, EXTRACT(MONTH FROM order_date), EXTRACT(YEAR FROM order_date)
+),
+cte2 AS (
+SELECT product_id, order_month,
+  SUM(CASE WHEN order_year = 2022 THEN sales ELSE 0 END) AS sales_2022,
+  SUM(CASE WHEN order_year = 2023 THEN sales ELSE 0 END) AS sales_2023,
+  SUM(CASE WHEN order_year = 2024 THEN sales ELSE 0 END) AS sales_2024
+FROM cte
+GROUP BY product_id, order_month
+)
+SELECT *
+FROM cte2
+WHERE sales_2024 > sales_2023 AND sales_2023 > sales_2022
+ORDER BY product_id;`,
     systemSolution: `WITH cte AS (
 SELECT product_id,
   EXTRACT(MONTH FROM order_date) AS order_month,
@@ -831,7 +975,10 @@ SELECT *
 FROM cte2
 WHERE sales_2024 > sales_2023 AND sales_2023 > sales_2022
 ORDER BY product_id;`,
-    starterCode: `-- 2022 vs 2023 vs 2024 Sales\n-- Write your solution here\nSELECT *\nFROM orders;`,
+    starterCode: `-- 2022 vs 2023 vs 2024 Sales
+-- Write your solution here
+SELECT *
+FROM orders;`,
     businessImpact: `Year-over-year sales growth analysis at the month level identifies consistently growing product-month combinations, helping demand planning teams forecast inventory needs, allocate marketing budgets to high-momentum products, and detect seasonal growth patterns.`,
     optimizationTips: [
       "Use EXTRACT(MONTH FROM ...) and EXTRACT(YEAR FROM ...) in PostgreSQL instead of MySQL's MONTH()/YEAR()",
@@ -845,7 +992,14 @@ ORDER BY product_id;`,
       "Multiple orders on same date for same product \u2014 correctly summed",
       "Sales exactly equal between two years \u2014 strictly greater required",
       "Product with sales in only some months"
-    ]
+    ],
+    expectedOutput: `+------------+-------+------------+------------+------------+
+| product_id | month | sales_2022 | sales_2023 | sales_2024 |
++------------+-------+------------+------------+------------+
+| 1          | 1     | 100        | 300        | 500        |
+| 2          | 1     | 400        | 450        | 500        |
+| 2          | 6     | 300        | 350        | 400        |
++------------+-------+------------+------------+------------+`
   },
 
   {
@@ -930,7 +1084,10 @@ FROM cte
 GROUP BY room_id, book_date
 HAVING COUNT(*) > 1
 ORDER BY room_id, book_date;`,
-    starterCode: `-- Hotel Booking Mistake\n-- Write your solution here\nSELECT *\nFROM bookings;`,
+    starterCode: `-- Hotel Booking Mistake
+-- Write your solution here
+SELECT *
+FROM bookings;`,
     businessImpact: `Overbooking detection prevents customer dissatisfaction, avoids costly compensation, and maintains hotel reputation. Identifying exact overlapping dates and affected customers enables proactive rebooking and targeted communication for service recovery.`,
     optimizationTips: [
       "Calendar dimension table enables date expansion without generating series",
@@ -1054,7 +1211,10 @@ SELECT p.name AS child_name,
 FROM people p
 INNER JOIN mother_father mf ON p.id = mf.child_id
 ORDER BY child_name;`,
-    starterCode: `-- Child and Parents\n-- Write your solution here\nSELECT *\nFROM people;`,
+    starterCode: `-- Child and Parents
+-- Write your solution here
+SELECT *
+FROM people;`,
     businessImpact: `Family relationship mapping from normalized relational data is essential in healthcare (genetic history), insurance (dependent coverage), legal systems (inheritance), and CRM systems (household grouping for family-based promotions).`,
     optimizationTips: [
       "Double LEFT JOIN with gender filter efficiently pivots parent rows into mother/father columns",
@@ -1146,7 +1306,10 @@ FROM cte, cte_total_seats
 WHERE rn = 1
 GROUP BY party_name, total_seats
 ORDER BY seats_won DESC;`,
-    starterCode: `-- Election Winner\n-- Write your solution here\nSELECT *\nFROM elections;`,
+    starterCode: `-- Election Winner
+-- Write your solution here
+SELECT *
+FROM elections;`,
     businessImpact: `Election analysis with district-level winner determination and national seat aggregation mirrors real-world parliamentary systems. The 50% threshold logic enables automated winner declaration, useful for election commissions, media dashboards, and political analytics platforms.`,
     optimizationTips: [
       "RANK() handles ties correctly \u2014 multiple candidates can win a district",
@@ -1240,7 +1403,10 @@ FROM (
 GROUP BY origin, destination
 ORDER BY tc DESC
 LIMIT 1;`,
-    starterCode: `-- Busiest Airline Route\n-- Write your solution here\nSELECT *\nFROM tickets;`,
+    starterCode: `-- Busiest Airline Route
+-- Write your solution here
+SELECT *
+FROM tickets;`,
     businessImpact: `Route traffic analysis helps airlines optimize fleet allocation, adjust frequency on high-demand routes, and identify underperformance. Distinguishing one-way vs round-trip tickets provides insight into travel patterns and helps with revenue management pricing.`,
     optimizationTips: [
       "UNION ALL for round trips doubles the contribution to both origin and destination routes",
@@ -1337,7 +1503,10 @@ FROM cte2
 WHERE rn_high = 1 OR rn_low = 1
 GROUP BY city
 ORDER BY city;`,
-    starterCode: `-- Credit Card Transactions (Part-2)\n-- Write your solution here\nSELECT *\nFROM credit_card_transactions;`,
+    starterCode: `-- Credit Card Transactions (Part-2)
+-- Write your solution here
+SELECT *
+FROM credit_card_transactions;`,
     businessImpact: `City-level card type spending analysis reveals consumer payment preferences by geography, helping banks tailor card offerings, adjust credit limits, and design city-specific rewards programs for different card tiers.`,
     optimizationTips: [
       "Double RANK() in one pass avoids scanning data twice",
@@ -1394,7 +1563,14 @@ INSERT INTO user_passwords VALUES
 (7, 'Grace', 'Abcdefgh'),
 (8, 'Henry', 'V@lid1Pass');
 `,
-    mySolution: null,
+    mySolution: `SELECT user_id, user_name
+FROM user_passwords
+WHERE
+  LENGTH(password) >= 8
+  AND password ~ '[A-Za-z]'
+  AND password ~ '[0-9]'
+  AND password ~ '[@#$%^&*]'
+  AND password NOT LIKE '% %';`,
     systemSolution: `SELECT user_id, user_name
 FROM user_passwords
 WHERE
@@ -1403,7 +1579,10 @@ WHERE
   AND password ~ '[0-9]'
   AND password ~ '[@#$%^&*]'
   AND password NOT LIKE '% %';`,
-    starterCode: `-- Users With Valid Passwords\n-- Write your solution here\nSELECT *\nFROM user_passwords;`,
+    starterCode: `-- Users With Valid Passwords
+-- Write your solution here
+SELECT *
+FROM user_passwords;`,
     businessImpact: `Password validation queries help security teams audit existing user accounts for weak credentials, identify accounts requiring password resets, and ensure compliance with organizational security policies without exposing actual passwords.`,
     optimizationTips: [
       "Use PostgreSQL's ~ operator instead of MySQL's REGEXP for regex matching",
@@ -1476,7 +1655,10 @@ WHERE major_flag = 'Y'
        HAVING COUNT(*) = 1
    )
 ORDER BY student_id;`,
-    starterCode: `-- Student Major Subject\n-- Write your solution here\nSELECT *\nFROM student_courses;`,
+    starterCode: `-- Student Major Subject
+-- Write your solution here
+SELECT *
+FROM student_courses;`,
     businessImpact: `Identifying primary courses per student helps universities optimize class scheduling, allocate department resources, track degree completion progress, and generate accurate enrollment reports for accreditation.`,
     optimizationTips: [
       "Window function approach (COUNT OVER) avoids correlated subquery",
@@ -1596,7 +1778,10 @@ FROM products p
 JOIN product_sales ps ON p.product_id = ps.product_id
 GROUP BY p.product_name
 HAVING COUNT(DISTINCT ps.city_id) = (SELECT COUNT(*) FROM cities);`,
-    starterCode: `-- Products Sold in All Cities\n-- Write your solution here\nSELECT *\nFROM products;`,
+    starterCode: `-- Products Sold in All Cities
+-- Write your solution here
+SELECT *
+FROM products;`,
     businessImpact: `Identifying products with consistent sales across all operating cities helps supply chain teams ensure nationwide availability, detect distribution gaps, and recognize universally popular products for national marketing campaigns.`,
     optimizationTips: [
       "HAVING with subquery COUNT(*) FROM cities dynamically adapts to new cities",
@@ -1677,7 +1862,10 @@ SELECT reel_id, state,
     ROUND(CAST(max_cumulative_views AS NUMERIC) / days, 2) AS avg_daily_views
 FROM MaxViews
 ORDER BY avg_daily_views DESC;`,
-    starterCode: `-- Reel Daily View Averages by State\n-- Write your solution here\nSELECT *\nFROM reel;`,
+    starterCode: `-- Reel Daily View Averages by State
+-- Write your solution here
+SELECT *
+FROM reel;`,
     businessImpact: `Regional content performance analysis helps social media platforms optimize content delivery networks, target advertising by geography, identify viral content in specific markets, and help creators understand their regional audience engagement.`,
     optimizationTips: [
       "LAG approach calculates daily increments from cumulative data accurately",
@@ -1741,7 +1929,10 @@ ORDER BY original_number, sequence_length;`,
 SELECT expanded_number
 FROM NumberSeries
 ORDER BY original_number, sequence_length;`,
-    starterCode: `-- Sequence Expansion\n-- Write your solution here\nSELECT *\nFROM numbers;`,
+    starterCode: `-- Sequence Expansion
+-- Write your solution here
+SELECT *
+FROM numbers;`,
     businessImpact: `Sequence expansion is a foundational pattern for generating test data, creating date ranges, expanding compressed records, and building report scaffolding. Recursive CTEs in PostgreSQL are powerful for hierarchical and iterative data generation.`,
     optimizationTips: [
       "WITH RECURSIVE is PostgreSQL's way to implement iterative expansion",
@@ -1856,7 +2047,10 @@ LEFT JOIN emp_2020 e20 ON e20.emp_id = e21.emp_id
 WHERE e20.designation != e21.designation
    OR e20.designation IS NULL
    OR e21.designation IS NULL;`,
-    starterCode: `-- Employees Status Change(Part-1)\n-- Write your solution here\nSELECT *\nFROM emp_2020;`,
+    starterCode: `-- Employees Status Change(Part-1)
+-- Write your solution here
+SELECT *
+FROM emp_2020;`,
     businessImpact: `Year-over-year employee status tracking helps HR teams identify promotion velocity, attrition patterns, and hiring effectiveness. This data feeds into workforce planning, retention strategies, and organizational health dashboards.`,
     optimizationTips: [
       "FULL OUTER JOIN approach is cleaner and handles all three statuses in one pass",
@@ -1970,7 +2164,10 @@ WHERE e21.year = 2021
   AND (e20.designation != e21.designation
    OR e20.designation IS NULL
    OR e21.designation IS NULL);`,
-    starterCode: `-- Employees Status Change(Part-2)\n-- Write your solution here\nSELECT *\nFROM employees;`,
+    starterCode: `-- Employees Status Change(Part-2)
+-- Write your solution here
+SELECT *
+FROM employees;`,
     businessImpact: `Single-table year-over-year analysis uses self-join to compare employee records across time periods. This pattern is common in data warehouses storing slowly changing dimension data where historical records are preserved in the same table.`,
     optimizationTips: [
       "Self-join with year filter avoids pivot/unpivot operations",
@@ -2043,7 +2240,10 @@ FROM user_sessions
 GROUP BY user_id
 HAVING COUNT(DISTINCT CAST(login_timestamp AS DATE)) =
   (CURRENT_DATE - MIN(CAST(login_timestamp AS DATE))) + 1;`,
-    starterCode: `-- Music Lovers\n-- Write your solution here\nSELECT *\nFROM user_sessions;`,
+    starterCode: `-- Music Lovers
+-- Write your solution here
+SELECT *
+FROM user_sessions;`,
     businessImpact: `Identifying consistently engaged users helps Spotify measure platform stickiness, target retention campaigns, and understand what drives daily active usage. These "power users" are valuable for beta testing and premium upselling.`,
     optimizationTips: [
       "PostgreSQL date subtraction returns integer days directly (no DATEDIFF needed)",
@@ -2105,7 +2305,20 @@ INSERT INTO customers VALUES
 (4, 'Alice Brown  ', 'Alice@Email.Com', '111-222-3333', '789 Pine Rd'),
 (5, 'Charlie', 'jane@EMAIL.COM', '444 555 6666', NULL);
 `,
-    mySolution: null,
+    mySolution: `WITH RankedCustomers AS (
+    SELECT
+        customer_id,
+        TRIM(customer_name) AS customer_name,
+        LOWER(TRIM(email)) AS email,
+        REGEXP_REPLACE(phone, '[^0-9]', '', 'g') AS phone,
+        COALESCE(address, 'Unknown') AS address,
+        ROW_NUMBER() OVER (PARTITION BY LOWER(TRIM(email)) ORDER BY customer_id) AS rn
+    FROM customers
+)
+SELECT customer_id, customer_name, email, phone, address
+FROM RankedCustomers
+WHERE rn = 1
+ORDER BY customer_id;`,
     systemSolution: `WITH RankedCustomers AS (
     SELECT
         customer_id,
@@ -2120,7 +2333,10 @@ SELECT customer_id, customer_name, email, phone, address
 FROM RankedCustomers
 WHERE rn = 1
 ORDER BY customer_id;`,
-    starterCode: `-- Customer Data Cleaning\n-- Write your solution here\nSELECT *\nFROM customers;`,
+    starterCode: `-- Customer Data Cleaning
+-- Write your solution here
+SELECT *
+FROM customers;`,
     businessImpact: `Data cleansing queries are critical for maintaining CRM integrity. Deduplication by email prevents over-counting customers, while standardized phone formats enable SMS campaigns. NULL address handling ensures complete mailing lists for physical marketing.`,
     optimizationTips: [
       "REGEXP_REPLACE with 'g' flag for global replacement in PostgreSQL (MySQL doesn't need it)",
@@ -2203,7 +2419,10 @@ SELECT department,
 FROM RankedSalaries
 GROUP BY department
 ORDER BY department;`,
-    starterCode: `-- Salary Difference\n-- Write your solution here\nSELECT *\nFROM employees;`,
+    starterCode: `-- Salary Difference
+-- Write your solution here
+SELECT *
+FROM employees;`,
     businessImpact: `Salary gap analysis between top earners helps HR identify pay compression issues, ensure competitive compensation, and assess whether top performers are adequately differentiated from peers within each department.`,
     optimizationTips: [
       "DENSE_RANK handles tied salaries correctly \u2014 same salary gets same rank",
@@ -2340,7 +2559,10 @@ SELECT u.*,
 FROM users u
 CROSS JOIN total_collection t
 ORDER BY u.user_id;`,
-    starterCode: `-- Insured Amount\n-- Write your solution here\nSELECT *\nFROM users;`,
+    starterCode: `-- Insured Amount
+-- Write your solution here
+SELECT *
+FROM users;`,
     businessImpact: `Insurance risk-based pricing ensures actuarial soundness by linking premiums to risk profiles. This calculation allows insurers to set appropriate coverage levels, maintain profitability, and offer competitive rates to low-risk customers while protecting against high-risk exposure.`,
     optimizationTips: [
       "Nested CASE expressions handle the two-dimensional lookup (insurance type \u00d7 risk level)",
@@ -2464,7 +2686,34 @@ INSERT INTO customer_transactions VALUES
 (203, '2023-03-07', 'Bill'),
 (204, '2023-03-16', 'Bill');
 `,
-    mySolution: null,
+    mySolution: `WITH all_bills AS (
+    SELECT customer_id, loan_id AS bill_id, loan_due_date AS due_date, 0 AS bill_amount
+    FROM loans
+    UNION ALL
+    SELECT customer_id, bill_id, bill_due_date AS due_date, bill_amount
+    FROM credit_card_bills
+),
+on_time_calc AS (
+    SELECT b.customer_id,
+           SUM(b.bill_amount) AS bill_amount,
+           COUNT(*) AS total_bills,
+           SUM(CASE WHEN ct.transaction_date <= due_date THEN 1 ELSE 0 END) AS on_time_payments
+    FROM all_bills b
+    INNER JOIN customer_transactions ct ON b.bill_id = ct.loan_bill_id
+    GROUP BY b.customer_id
+)
+SELECT c.customer_id,
+       ROUND(
+           (ot.on_time_payments * 1.0 / ot.total_bills) * 70 +
+           (CASE
+                WHEN ot.bill_amount * 1.0 / c.credit_limit < 0.3 THEN 1
+                WHEN ot.bill_amount * 1.0 / c.credit_limit < 0.5 THEN 0.7
+                ELSE 0.5
+            END) * 30, 1
+       ) AS cibil_score
+FROM customers c
+INNER JOIN on_time_calc ot ON c.customer_id = ot.customer_id
+ORDER BY c.customer_id ASC;`,
     systemSolution: `WITH all_bills AS (
     SELECT customer_id, loan_id AS bill_id, loan_due_date AS due_date, 0 AS bill_amount
     FROM loans
@@ -2493,7 +2742,10 @@ SELECT c.customer_id,
 FROM customers c
 INNER JOIN on_time_calc ot ON c.customer_id = ot.customer_id
 ORDER BY c.customer_id ASC;`,
-    starterCode: `-- CIBIL Score\n-- Write your solution here\nSELECT *\nFROM customers;`,
+    starterCode: `-- CIBIL Score
+-- Write your solution here
+SELECT *
+FROM customers;`,
     businessImpact: `Credit scoring models assess borrower risk by weighing payment history (70%) and credit utilization (30%). Banks use these scores for loan approvals, interest rate determination, and risk-based pricing. Accurate scoring reduces default rates and improves portfolio quality.`,
     optimizationTips: [
       "UNION ALL combines loans and bills into a unified dataset for on-time calculation",
@@ -2549,7 +2801,18 @@ INSERT INTO customer_orders VALUES
 (7, 101, '2024-01-03', 350),
 (8, 105, '2024-01-04', 800);
 `,
-    mySolution: null,
+    mySolution: `WITH first_order_date AS (
+    SELECT customer_id, MIN(order_date) AS first_order
+    FROM customer_orders
+    GROUP BY customer_id
+)
+SELECT co.order_date,
+    SUM(CASE WHEN co.order_date = fod.first_order THEN 1 ELSE 0 END) AS new_customers,
+    SUM(CASE WHEN co.order_date > fod.first_order THEN 1 ELSE 0 END) AS repeat_customers
+FROM customer_orders co
+INNER JOIN first_order_date fod ON co.customer_id = fod.customer_id
+GROUP BY co.order_date
+ORDER BY order_date ASC;`,
     systemSolution: `WITH first_order_date AS (
     SELECT customer_id, MIN(order_date) AS first_order
     FROM customer_orders
@@ -2562,7 +2825,10 @@ FROM customer_orders co
 INNER JOIN first_order_date fod ON co.customer_id = fod.customer_id
 GROUP BY co.order_date
 ORDER BY order_date ASC;`,
-    starterCode: `-- New and Repeat Customers\n-- Write your solution here\nSELECT *\nFROM customer_orders;`,
+    starterCode: `-- New and Repeat Customers
+-- Write your solution here
+SELECT *
+FROM customer_orders;`,
     businessImpact: `Daily new vs repeat customer metrics are fundamental for e-commerce platforms to measure customer acquisition effectiveness, retention rates, and lifetime value trends. This data drives marketing budget allocation between acquisition and retention campaigns.`,
     optimizationTips: [
       "CTE with MIN(order_date) pre-computes first order for each customer",
@@ -2618,7 +2884,33 @@ INSERT INTO employees VALUES
 (3, '2024-01-01 09:00:00', '2024-01-01 17:00:00'),
 (3, '2024-01-02 09:00:00', '2024-01-02 17:00:00');
 `,
-    mySolution: null,
+    mySolution: `WITH logged_hours AS (
+SELECT *,
+  EXTRACT(EPOCH FROM (logout - login)) / 3600.0 AS hours_worked,
+  CASE
+    WHEN EXTRACT(EPOCH FROM (logout - login)) / 3600.0 > 10 THEN '10+'
+    WHEN EXTRACT(EPOCH FROM (logout - login)) / 3600.0 > 8 THEN '8+'
+    ELSE '8-'
+  END AS time_window
+FROM employees
+),
+time_window AS (
+  SELECT emp_id,
+    COUNT(*) AS days_8,
+    SUM(CASE WHEN time_window = '10+' THEN 1 ELSE 0 END) AS days_10
+  FROM logged_hours
+  WHERE time_window IN ('10+', '8+')
+  GROUP BY emp_id
+)
+SELECT emp_id,
+  CASE
+    WHEN days_8 >= 3 AND days_10 >= 2 THEN 'both'
+    WHEN days_8 >= 3 THEN '1'
+    ELSE '2'
+  END AS criterion
+FROM time_window
+WHERE days_8 >= 3 OR days_10 >= 2
+ORDER BY emp_id ASC;`,
     systemSolution: `WITH logged_hours AS (
 SELECT *,
   EXTRACT(EPOCH FROM (logout - login)) / 3600.0 AS hours_worked,
@@ -2646,7 +2938,10 @@ SELECT emp_id,
 FROM time_window
 WHERE days_8 >= 3 OR days_10 >= 2
 ORDER BY emp_id ASC;`,
-    starterCode: `-- Workaholics Employees\n-- Write your solution here\nSELECT *\nFROM employees;`,
+    starterCode: `-- Workaholics Employees
+-- Write your solution here
+SELECT *
+FROM employees;`,
     businessImpact: `Identifying employees with excessive working hours helps HR ensure labor law compliance, prevent burnout, and implement wellness programs. This analysis can flag potential overtime cost issues and help managers redistribute workload more effectively.`,
     optimizationTips: [
       "EXTRACT(EPOCH FROM interval) / 3600 converts to hours in PostgreSQL (replaces MySQL's TIMESTAMPDIFF)",
@@ -2717,7 +3012,22 @@ INSERT INTO lift_passengers VALUES
 ('Henry', 70, 'M', 2),
 ('Ivy', 45, 'F', 2);
 `,
-    mySolution: null,
+    mySolution: `WITH running_weight AS (
+SELECT l.id, lp.passenger_name, lp.weight_kg, l.capacity_kg, lp.gender,
+  SUM(lp.weight_kg) OVER(
+    PARTITION BY l.id
+    ORDER BY CASE WHEN lp.gender = 'F' THEN 0 ELSE 1 END, lp.weight_kg
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+  ) AS running_sum
+FROM lifts l
+INNER JOIN lift_passengers lp ON l.id = lp.lift_id
+)
+SELECT id,
+  STRING_AGG(passenger_name, ',' ORDER BY CASE WHEN gender = 'F' THEN 0 ELSE 1 END, weight_kg) AS passenger_list
+FROM running_weight
+WHERE running_sum <= capacity_kg
+GROUP BY id
+ORDER BY id;`,
     systemSolution: `WITH running_weight AS (
 SELECT l.id, lp.passenger_name, lp.weight_kg, l.capacity_kg, lp.gender,
   SUM(lp.weight_kg) OVER(
@@ -2734,7 +3044,10 @@ FROM running_weight
 WHERE running_sum <= capacity_kg
 GROUP BY id
 ORDER BY id;`,
-    starterCode: `-- Lift Overloaded (Part 2)\n-- Write your solution here\nSELECT *\nFROM lifts;`,
+    starterCode: `-- Lift Overloaded (Part 2)
+-- Write your solution here
+SELECT *
+FROM lifts;`,
     businessImpact: `Capacity-constrained resource allocation with priority ordering models real-world scenarios like elevator management, vehicle loading, and batch processing. The gender-priority ordering demonstrates how business rules can be incorporated into SQL optimization problems.`,
     optimizationTips: [
       "STRING_AGG replaces MySQL's GROUP_CONCAT with SEPARATOR syntax in PostgreSQL",
@@ -2813,7 +3126,10 @@ SELECT order_month, product_id
 FROM cte
 WHERE rn >= 3 AND sales > last2
 ORDER BY order_month, product_id ASC;`,
-    starterCode: `-- Trending Products\n-- Write your solution here\nSELECT *\nFROM orders;`,
+    starterCode: `-- Trending Products
+-- Write your solution here
+SELECT *
+FROM orders;`,
     businessImpact: `Identifying trending products helps Amazon optimize inventory allocation, adjust pricing strategies, and feature products in promotional campaigns. Products with accelerating sales velocity may indicate emerging trends or successful marketing campaigns.`,
     optimizationTips: [
       "Window function with ROWS BETWEEN efficiently computes rolling sum of previous 2 months",
@@ -2890,7 +3206,10 @@ SELECT id, COUNT(*) AS total_rides,
 FROM cte
 GROUP BY id
 ORDER BY id ASC;`,
-    starterCode: `-- Uber Profit Rides\n-- Write your solution here\nSELECT *\nFROM drivers;`,
+    starterCode: `-- Uber Profit Rides
+-- Write your solution here
+SELECT *
+FROM drivers;`,
     businessImpact: `Profit rides (back-to-back rides with no repositioning) indicate driver efficiency and demand density. This metric helps Uber optimize driver routing algorithms, identify high-demand corridors, and adjust surge pricing zones.`,
     optimizationTips: [
       "LAG and LEAD are interchangeable approaches \u2014 both capture consecutive ride transitions",
@@ -2955,7 +3274,10 @@ INNER JOIN orders o2
 WHERE o1.product_id > o2.product_id
 GROUP BY o1.product_id, o2.product_id
 ORDER BY purchase_frequency DESC;`,
-    starterCode: `-- Product Recommendation\n-- Write your solution here\nSELECT *\nFROM orders;`,
+    starterCode: `-- Product Recommendation
+-- Write your solution here
+SELECT *
+FROM orders;`,
     businessImpact: `Market basket analysis identifies frequently co-purchased products, powering 'frequently bought together' recommendations. This drives cross-selling revenue, optimizes product bundling strategies, and improves inventory co-location in warehouses.`,
     optimizationTips: [
       "Self-join on order_id with product_id inequality avoids duplicate pairs",
@@ -3056,7 +3378,10 @@ SELECT order_year, order_month,
 FROM cte
 GROUP BY order_year, order_month
 ORDER BY order_year, order_month;`,
-    starterCode: `-- Cancellation vs Return\n-- Write your solution here\nSELECT *\nFROM orders;`,
+    starterCode: `-- Cancellation vs Return
+-- Write your solution here
+SELECT *
+FROM orders;`,
     businessImpact: `Separating cancellation rates from return rates helps e-commerce platforms identify distinct operational issues: high cancellation suggests pricing/inventory problems, while high returns indicate product quality or listing accuracy issues. Monthly trends reveal seasonality and the impact of policy changes.`,
     optimizationTips: [
       "EXTRACT(YEAR/MONTH FROM) replaces MySQL's YEAR()/MONTH() in PostgreSQL",
@@ -3149,7 +3474,10 @@ SELECT team_name, COUNT(*) AS match_played,
 FROM cte
 GROUP BY team_name
 ORDER BY team_name;`,
-    starterCode: `-- Points Table\n-- Write your solution here\nSELECT *\nFROM icc_world_cup;`,
+    starterCode: `-- Points Table
+-- Write your solution here
+SELECT *
+FROM icc_world_cup;`,
     businessImpact: `Tournament points table derivation from match results is a classic UNION ALL + aggregation pattern. It normalizes asymmetric match data (team_1 vs team_2) into a per-team view, applicable to any sports league, gaming leaderboard, or competitive ranking system.`,
     optimizationTips: [
       "UNION ALL unpivots team_1 and team_2 into a single team column for aggregation",
@@ -3246,7 +3574,10 @@ SELECT emp_id,
 FROM considered_time
 GROUP BY emp_id
 ORDER BY emp_id;`,
-    starterCode: `-- Employees Inside Office (Part 2)\n-- Write your solution here\nSELECT *\nFROM employee_record;`,
+    starterCode: `-- Employees Inside Office (Part 2)
+-- Write your solution here
+SELECT *
+FROM employee_record;`,
     businessImpact: `Time-windowed employee attendance tracking between specific timestamps requires clipping in/out times to the observation window. This pattern applies broadly to billing calculations, resource utilization during maintenance windows, and shift-overlap analysis.`,
     optimizationTips: [
       "EXTRACT(EPOCH FROM interval) / 60 converts to minutes in PostgreSQL (replaces TIMESTAMPDIFF)",
@@ -3353,7 +3684,10 @@ WHERE p.post_id IS NULL
 ) s
 WHERE rn = 1
 ORDER BY user_id;`,
-    starterCode: `-- LinkedIn Recommendation\n-- Write your solution here\nSELECT *\nFROM post_likes;`,
+    starterCode: `-- LinkedIn Recommendation
+-- Write your solution here
+SELECT *
+FROM post_likes;`,
     businessImpact: `Social media feed recommendation based on network activity \u2014 recommending posts liked by people you follow, excluding posts you've already liked. This collaborative filtering approach drives engagement by surfacing relevant content from a user's social graph.`,
     optimizationTips: [
       "JOIN between user_follows and post_likes identifies posts liked by followed users",
@@ -3404,7 +3738,28 @@ INSERT INTO dashboard_visit VALUES
 ('U2', '2024-01-01 14:00:00'),
 ('U3', '2024-01-01 10:00:00');
 `,
-    mySolution: null,
+    mySolution: `WITH previous_visits AS (
+    SELECT
+        user_id,
+        visit_time,
+        LAG(visit_time) OVER (PARTITION BY user_id ORDER BY visit_time) AS previous_visit_time
+    FROM dashboard_visit
+),
+visit_flag AS (
+SELECT user_id, previous_visit_time, visit_time,
+  CASE
+    WHEN previous_visit_time IS NULL THEN 1
+    WHEN EXTRACT(EPOCH FROM (visit_time - previous_visit_time)) / 3600 > 1 THEN 1
+    ELSE 0
+  END AS new_visit_flag
+FROM previous_visits
+)
+SELECT user_id,
+  SUM(new_visit_flag) AS no_of_visits,
+  COUNT(DISTINCT CAST(visit_time AS DATE)) AS visit_days
+FROM visit_flag
+GROUP BY user_id
+ORDER BY user_id ASC;`,
     systemSolution: `WITH previous_visits AS (
     SELECT
         user_id,
@@ -3427,7 +3782,10 @@ SELECT user_id,
 FROM visit_flag
 GROUP BY user_id
 ORDER BY user_id ASC;`,
-    starterCode: `-- Dashboard Visits\n-- Write your solution here\nSELECT *\nFROM dashboard_visit;`,
+    starterCode: `-- Dashboard Visits
+-- Write your solution here
+SELECT *
+FROM dashboard_visit;`,
     businessImpact: `Session-based visit counting (merging events within 60 minutes) provides more accurate engagement metrics than raw page views. This pattern is standard in web analytics and helps distinguish true user sessions from rapid refreshes or multi-tab browsing.`,
     optimizationTips: [
       "LAG identifies the previous visit time for gap calculation",
@@ -3512,7 +3870,10 @@ SELECT SUM(net_amount)
   - SUM(CASE WHEN credit_card_amount >= 100 AND credit_card_transact_cnt >= 2 THEN 0 ELSE 5 END)
   - 5 * (12 - (SELECT COUNT(DISTINCT tran_month) FROM cte)) AS final_balance
 FROM cte2;`,
-    starterCode: `-- Final Account Balance\n-- Write your solution here\nSELECT *\nFROM Transactions;`,
+    starterCode: `-- Final Account Balance
+-- Write your solution here
+SELECT *
+FROM Transactions;`,
     businessImpact: `Banking fee calculation with conditional waiver rules requires month-by-month aggregation and business logic application. This pattern is common in financial systems where fees are waived based on activity thresholds, loyalty tiers, or minimum balance requirements.`,
     optimizationTips: [
       "EXTRACT(MONTH FROM) replaces MySQL's MONTH() in PostgreSQL",
@@ -3613,7 +3974,10 @@ FROM users u
 LEFT JOIN cte ON u.user_id = cte.user_id AND cte.type = 'Prime'
 LEFT JOIN cte c ON c.user_id = u.user_id AND c.rn = 1
 ORDER BY last_access_service_date;`,
-    starterCode: `-- Prime Subscription\n-- Write your solution here\nSELECT *\nFROM users;`,
+    starterCode: `-- Prime Subscription
+-- Write your solution here
+SELECT *
+FROM users;`,
     businessImpact: `Funnel analysis identifying which service was the last touchpoint before Prime conversion helps Amazon optimize its upselling strategy. For non-Prime users, the last accessed service indicates the best channel for targeted Prime promotions.`,
     optimizationTips: [
       "LAG gets the previous service/date before Prime conversion event",
@@ -3698,7 +4062,10 @@ SELECT fullname,
     ELSE SUBSTR(fullname, 1, comma_position - 1)
   END AS last_name
 FROM cte;`,
-    starterCode: `-- Employee Name\n-- Write your solution here\nSELECT *\nFROM employee;`,
+    starterCode: `-- Employee Name
+-- Write your solution here
+SELECT *
+FROM employee;`,
     businessImpact: `Name parsing from combined full name fields is a common data cleansing task. Proper first/middle/last name separation enables personalized communications, duplicate detection, and integration with external systems that require structured name fields.`,
     optimizationTips: [
       "POSITION() replaces MySQL's INSTR() in PostgreSQL",
@@ -3794,7 +4161,10 @@ FROM cte
 WHERE ride_time != 0
 GROUP BY rider_id, ride_date
 ORDER BY rider_id, ride_date;`,
-    starterCode: `-- Rider Ride Time\n-- Write your solution here\nSELECT *\nFROM orders;`,
+    starterCode: `-- Rider Ride Time
+-- Write your solution here
+SELECT *
+FROM orders;`,
     businessImpact: `Splitting delivery time across calendar days is essential for accurate daily rider performance tracking. Deliveries spanning midnight need to be attributed proportionally to each day for fair compensation, shift scheduling, and operational analytics.`,
     optimizationTips: [
       "EXTRACT(EPOCH FROM interval) / 60 replaces TIMESTAMPDIFF(MINUTE) in PostgreSQL",
@@ -3916,7 +4286,10 @@ SELECT
 FROM cte2
 GROUP BY notification_id
 ORDER BY notification_id;`,
-    starterCode: `-- Amazon Notifications\n-- Write your solution here\nSELECT *\nFROM notifications;`,
+    starterCode: `-- Amazon Notifications
+-- Write your solution here
+SELECT *
+FROM notifications;`,
     businessImpact: `Notification attribution analysis measures which push notifications directly drive purchases. By associating purchases within a 2-hour window (or before the next notification), Amazon can calculate notification ROI, optimize send frequency, and personalize product recommendations.`,
     optimizationTips: [
       "'delivered_at + INTERVAL 2 hours' replaces MySQL's DATE_ADD in PostgreSQL",
@@ -4031,7 +4404,10 @@ SELECT a.product_id, a.order_date, COALESCE(cte.sales, 0) AS sales,
 FROM all_products_dates a
 LEFT JOIN cte ON a.product_id = cte.product_id AND a.order_date = cte.order_date
 ORDER BY a.product_id, a.order_date;`,
-    starterCode: `-- Rolling Sales\n-- Write your solution here\nSELECT *\nFROM orders;`,
+    starterCode: `-- Rolling Sales
+-- Write your solution here
+SELECT *
+FROM orders;`,
     businessImpact: `Rolling 3-day sales calculations smooth out daily volatility and reveal short-term trends. Using a calendar table ensures zero-sale days are included, preventing misleading gaps that would distort the rolling window calculation.`,
     optimizationTips: [
       "Calendar table CROSS JOIN ensures every date is represented per product",
@@ -4087,7 +4463,23 @@ INSERT INTO revenue VALUES
 (3, 2020, 110000.00),
 (3, 2021, 145000.00);
 `,
-    mySolution: null,
+    mySolution: `WITH revenue_growth AS (
+    SELECT
+        company_id,
+        year,
+        revenue,
+        CASE
+          WHEN revenue >= 1.25 * LAG(revenue, 1, 0) OVER (PARTITION BY company_id ORDER BY year) THEN 1
+          ELSE 0
+        END AS revenue_growth_flag
+    FROM revenue
+)
+SELECT company_id, SUM(revenue) AS total_revenue
+FROM revenue_growth
+WHERE company_id NOT IN
+  (SELECT company_id FROM revenue_growth WHERE revenue_growth_flag = 0)
+GROUP BY company_id
+ORDER BY company_id;`,
     systemSolution: `WITH revenue_growth AS (
     SELECT
         company_id,
@@ -4105,7 +4497,10 @@ WHERE company_id NOT IN
   (SELECT company_id FROM revenue_growth WHERE revenue_growth_flag = 0)
 GROUP BY company_id
 ORDER BY company_id;`,
-    starterCode: `-- Consistent Growth\n-- Write your solution here\nSELECT *\nFROM revenue;`,
+    starterCode: `-- Consistent Growth
+-- Write your solution here
+SELECT *
+FROM revenue;`,
     businessImpact: `Identifying companies with consistent 25%+ annual revenue growth filters for hypergrowth candidates in investment analysis. The NOT IN subquery approach elegantly excludes any company that ever failed the growth threshold, ensuring true consistency.`,
     optimizationTips: [
       "LAG with default 0 ensures the first year always passes the threshold",
@@ -4202,7 +4597,10 @@ ORDER BY orderId;`,
 FROM conversation
 GROUP BY orderId, cityCode
 ORDER BY orderId;`,
-    starterCode: `-- Customer Support Metrics\n-- Write your solution here\nSELECT *\nFROM conversation;`,
+    starterCode: `-- Customer Support Metrics
+-- Write your solution here
+SELECT *
+FROM conversation;`,
     businessImpact: `Multi-dimensional customer support metrics from conversation logs provide insights into response times, resolution rates, and agent reassignment patterns. This enables support team optimization, SLA monitoring, and identification of systemic issues affecting customer experience.`,
     optimizationTips: [
       "Conditional MIN/SUM with CASE WHEN computes multiple metrics in a single GROUP BY pass",
@@ -4308,7 +4706,10 @@ FROM cte
 INNER JOIN cte2 ON cte.group_id = cte2.group_id
 WHERE cte.rn = 1
 ORDER BY cte.group_id, cte.participant_name;`,
-    starterCode: `-- Eat and Win\n-- Write your solution here\nSELECT *\nFROM competition;`,
+    starterCode: `-- Eat and Win
+-- Write your solution here
+SELECT *
+FROM competition;`,
     businessImpact: `Prize pool distribution with RANK-based winner detection and proportional payout calculation. The 30% loser-bet redistribution with tie-splitting demonstrates a common pattern in gaming, fantasy sports, and betting platform calculations.`,
     optimizationTips: [
       "RANK() handles ties correctly \u2014 all tied participants get rank 1",
@@ -4444,7 +4845,10 @@ JOIN seasons ss ON s.sale_date BETWEEN ss.start_date AND ss.end_date
 WHERE ts.rn = 1
 GROUP BY ts.region_name, ts.product_name, ss.season_name
 ORDER BY ts.region_name, ts.product_name, ss.season_name;`,
-    starterCode: `-- Seasonal Trends\n-- Write your solution here\nSELECT *\nFROM products;`,
+    starterCode: `-- Seasonal Trends
+-- Write your solution here
+SELECT *
+FROM products;`,
     businessImpact: `Seasonal sales analysis for top products per region enables targeted inventory planning, regional marketing campaigns, and demand forecasting. Understanding which products peak in which seasons drives purchasing decisions and promotional scheduling.`,
     optimizationTips: [
       "First CTE identifies top product per region, second breaks down by season",
@@ -4485,7 +4889,18 @@ CREATE TABLE logs (
 INSERT INTO logs VALUES
 (1), (2), (3), (5), (6), (8), (10), (11), (12), (13), (20);
 `,
-    mySolution: null,
+    mySolution: `WITH numbered_logs AS (
+    SELECT
+        log_id,
+        log_id - ROW_NUMBER() OVER (ORDER BY log_id) AS grp
+    FROM logs
+)
+SELECT
+    MIN(log_id) AS start_id,
+    MAX(log_id) AS end_id
+FROM numbered_logs
+GROUP BY grp
+ORDER BY start_id;`,
     systemSolution: `WITH numbered_logs AS (
     SELECT
         log_id,
@@ -4498,7 +4913,10 @@ SELECT
 FROM numbered_logs
 GROUP BY grp
 ORDER BY start_id;`,
-    starterCode: `-- Contiguous Ranges\n-- Write your solution here\nSELECT *\nFROM logs;`,
+    starterCode: `-- Contiguous Ranges
+-- Write your solution here
+SELECT *
+FROM logs;`,
     businessImpact: `Gap-and-island detection identifies contiguous ranges in sequential data. This pattern is fundamental for log analysis (finding continuous uptime/downtime), seat/resource allocation, missing data detection, and sequence gap reporting.`,
     optimizationTips: [
       "Classic gap-and-island technique: log_id - ROW_NUMBER() creates same group value for contiguous IDs",
@@ -4545,7 +4963,26 @@ INSERT INTO hierarchy VALUES
 (2, 1), (3, 1), (4, 2), (5, 2),
 (6, 3), (7, 4), (8, 5);
 `,
-    mySolution: null,
+    mySolution: `WITH RECURSIVE ReporteesCTE AS (
+    SELECT
+        m_id AS manager_id,
+        e_id AS employee_id
+    FROM hierarchy
+
+    UNION ALL
+
+    SELECT
+        h.m_id AS manager_id,
+        r.employee_id
+    FROM hierarchy h
+    JOIN ReporteesCTE r ON h.e_id = r.manager_id
+)
+SELECT
+    manager_id AS m_id,
+    COUNT(DISTINCT employee_id) AS num_of_reportees
+FROM ReporteesCTE
+GROUP BY manager_id
+ORDER BY num_of_reportees DESC, m_id;`,
     systemSolution: `WITH RECURSIVE ReporteesCTE AS (
     SELECT
         m_id AS manager_id,
@@ -4566,7 +5003,10 @@ SELECT
 FROM ReporteesCTE
 GROUP BY manager_id
 ORDER BY num_of_reportees DESC, m_id;`,
-    starterCode: `-- Hierarchy Reportee Count\n-- Write your solution here\nSELECT *\nFROM hierarchy;`,
+    starterCode: `-- Hierarchy Reportee Count
+-- Write your solution here
+SELECT *
+FROM hierarchy;`,
     businessImpact: `Recursive CTE traversal of org hierarchy counts all direct and indirect reports under each manager. This is essential for span-of-control analysis, restructuring decisions, and understanding organizational bottlenecks.`,
     optimizationTips: [
       "WITH RECURSIVE builds the full reporting chain from each manager down",
@@ -4617,7 +5057,26 @@ INSERT INTO events VALUES
 (2, 'page_view', '2024-01-01 09:00:00'),
 (2, 'click', '2024-01-01 09:10:00');
 `,
-    mySolution: null,
+    mySolution: `WITH cte AS (
+    SELECT *,
+      LAG(event_time, 1, event_time) OVER (PARTITION BY userid ORDER BY event_time) AS prev_event_time,
+      EXTRACT(EPOCH FROM (event_time - LAG(event_time, 1, event_time) OVER (PARTITION BY userid ORDER BY event_time))) / 60 AS time_diff
+    FROM events
+),
+cte2 AS (
+    SELECT userid, event_type, prev_event_time, event_time,
+      CASE WHEN time_diff <= 30 THEN 0 ELSE 1 END AS flag,
+      SUM(CASE WHEN time_diff <= 30 THEN 0 ELSE 1 END) OVER (PARTITION BY userid ORDER BY event_time) AS group_id
+    FROM cte
+)
+SELECT userid,
+  ROW_NUMBER() OVER (PARTITION BY userid ORDER BY MIN(event_time)) AS session_id,
+  MIN(event_time) AS session_start_time,
+  MAX(event_time) AS session_end_time,
+  EXTRACT(EPOCH FROM (MAX(event_time) - MIN(event_time))) / 60 AS session_duration,
+  COUNT(*) AS event_count
+FROM cte2
+GROUP BY userid, group_id;`,
     systemSolution: `WITH cte AS (
     SELECT *,
       LAG(event_time, 1, event_time) OVER (PARTITION BY userid ORDER BY event_time) AS prev_event_time,
@@ -4638,7 +5097,10 @@ SELECT userid,
   COUNT(*) AS event_count
 FROM cte2
 GROUP BY userid, group_id;`,
-    starterCode: `-- User Session Activity\n-- Write your solution here\nSELECT *\nFROM events;`,
+    starterCode: `-- User Session Activity
+-- Write your solution here
+SELECT *
+FROM events;`,
     businessImpact: `Session detection from raw event streams is foundational for web/app analytics. Identifying session boundaries (30-minute inactivity gap) enables calculation of engagement metrics, retention analysis, and user behavior funnel optimization.`,
     optimizationTips: [
       "EXTRACT(EPOCH FROM interval) / 60 replaces TIMESTAMPDIFF(MINUTE) in PostgreSQL",
@@ -4694,7 +5156,14 @@ INSERT INTO assessments VALUES
 (5, 2, NULL, 100, NULL),
 (6, 2, 100, NULL, 100);
 `,
-    mySolution: null,
+    mySolution: `SELECT experience, COUNT(*) AS total_candidates,
+  SUM(CASE WHEN (
+    CASE WHEN sql_score IS NULL OR sql_score = 100 THEN 1 ELSE 0 END +
+    CASE WHEN algo IS NULL OR algo = 100 THEN 1 ELSE 0 END +
+    CASE WHEN bug_fixing IS NULL OR bug_fixing = 100 THEN 1 ELSE 0 END
+  ) = 3 THEN 1 ELSE 0 END) AS perfect_score_candidates
+FROM assessments
+GROUP BY experience;`,
     systemSolution: `SELECT experience, COUNT(*) AS total_candidates,
   SUM(CASE WHEN (
     CASE WHEN sql_score IS NULL OR sql_score = 100 THEN 1 ELSE 0 END +
@@ -4703,7 +5172,10 @@ INSERT INTO assessments VALUES
   ) = 3 THEN 1 ELSE 0 END) AS perfect_score_candidates
 FROM assessments
 GROUP BY experience;`,
-    starterCode: `-- Perfect Score Candidates\n-- Write your solution here\nSELECT *\nFROM assessments;`,
+    starterCode: `-- Perfect Score Candidates
+-- Write your solution here
+SELECT *
+FROM assessments;`,
     businessImpact: `Perfect score analysis per experience level reveals hiring pipeline quality. NULL-aware scoring (treating unassigned tasks as non-failures) correctly handles partial assessments, providing fair evaluation metrics for recruitment optimization.`,
     optimizationTips: [
       "Nested CASE handles NULL as 'not required' (pass by default)",
@@ -4826,7 +5298,10 @@ SELECT
     END AS label
 FROM Project_Salary_Cost
 ORDER BY project_title;`,
-    starterCode: `-- Project Budget\n-- Write your solution here\nSELECT *\nFROM employees;`,
+    starterCode: `-- Project Budget
+-- Write your solution here
+SELECT *
+FROM employees;`,
     businessImpact: `Project budget forecasting prorates employee salaries by project duration to predict cost overruns. This enables proactive budget management, resource reallocation, and financial planning before projects exceed their allocated budgets.`,
     optimizationTips: [
       "(end_date - start_date)::NUMERIC / 365.0 replaces MySQL's DATEDIFF / 365 in PostgreSQL",
@@ -4879,14 +5354,22 @@ INSERT INTO orders VALUES
 (3, 108, 'Mouse'),
 (4, 109, 'Laptop');
 `,
-    mySolution: null,
+    mySolution: `SELECT customer_id, COUNT(DISTINCT product_name) AS total_distinct_products
+FROM orders
+WHERE customer_id NOT IN (SELECT customer_id FROM orders WHERE product_name = 'Phone Case')
+GROUP BY customer_id
+HAVING COUNT(DISTINCT CASE WHEN product_name IN ('Laptop', 'Mouse') THEN product_name END) = 2
+ORDER BY customer_id;`,
     systemSolution: `SELECT customer_id, COUNT(DISTINCT product_name) AS total_distinct_products
 FROM orders
 WHERE customer_id NOT IN (SELECT customer_id FROM orders WHERE product_name = 'Phone Case')
 GROUP BY customer_id
 HAVING COUNT(DISTINCT CASE WHEN product_name IN ('Laptop', 'Mouse') THEN product_name END) = 2
 ORDER BY customer_id;`,
-    starterCode: `-- Selective Buyers Analysis\n-- Write your solution here\nSELECT *\nFROM orders;`,
+    starterCode: `-- Selective Buyers Analysis
+-- Write your solution here
+SELECT *
+FROM orders;`,
     businessImpact: `Customer purchase pattern analysis combining inclusion (bought A AND B) with exclusion (never bought C) criteria enables targeted marketing, cross-sell recommendations, and customer segmentation for product bundle strategies.`,
     optimizationTips: [
       "NOT IN subquery filters out customers who ever bought 'Phone Case'",
@@ -4966,7 +5449,10 @@ cumulative_events AS (
 SELECT station_id, MAX(current_trains) AS min_platforms_required
 FROM cumulative_events
 GROUP BY station_id;`,
-    starterCode: `-- Train Schedule\n-- Write your solution here\nSELECT *\nFROM train_schedule;`,
+    starterCode: `-- Train Schedule
+-- Write your solution here
+SELECT *
+FROM train_schedule;`,
     businessImpact: `The sweep-line algorithm (arrival = +1, departure = -1 events) determines peak concurrent occupancy at each station. This classic interval scheduling technique is used in platform allocation, meeting room scheduling, and resource capacity planning.`,
     optimizationTips: [
       "UNION ALL creates +1/-1 events for arrivals and departures",
@@ -4993,9 +5479,11 @@ GROUP BY station_id;`,
 Note : Dates are displayed as per UTC time zone.`,
     schema: [],
     sampleData: ``,
-    mySolution: null,
+    mySolution: `SELECT CURRENT_DATE - CAST(EXTRACT(DOW FROM CURRENT_DATE) AS INT) - CASE WHEN EXTRACT(DOW FROM CURRENT_DATE) = 0 THEN 7 ELSE 0 END AS last_sunday;`,
     systemSolution: `SELECT CURRENT_DATE - CAST(EXTRACT(DOW FROM CURRENT_DATE) AS INT) - CASE WHEN EXTRACT(DOW FROM CURRENT_DATE) = 0 THEN 7 ELSE 0 END AS last_sunday;`,
-    starterCode: `-- Last Sunday\n-- Write your solution here\nSELECT 1;`,
+    starterCode: `-- Last Sunday
+-- Write your solution here
+SELECT 1;`,
     businessImpact: `Date arithmetic to find the last occurrence of a specific weekday is common in weekly reporting, payroll processing, and SLA deadline calculations. PostgreSQL's EXTRACT(DOW) returns 0 for Sunday, requiring special handling.`,
     optimizationTips: [
       "EXTRACT(DOW FROM date) returns 0=Sunday through 6=Saturday in PostgreSQL",
@@ -5150,7 +5638,10 @@ formatted_output AS (
 SELECT name, phone, rating
 FROM formatted_output
 ORDER BY is_promoted DESC, avg_rating DESC, total_reviews DESC;`,
-    starterCode: `-- The Yellow Pages\n-- Write your solution here\nSELECT *\nFROM companies;`,
+    starterCode: `-- The Yellow Pages
+-- Write your solution here
+SELECT *
+FROM companies;`,
     businessImpact: `Business directory formatting with promotion flags, star ratings, and review counts creates a structured Yellow Pages listing. CONCAT with REPEAT generates visual star ratings, while conditional formatting separates promoted (unrated) from organic (rated) listings.`,
     optimizationTips: [
       "REPEAT('*', FLOOR(avg)::INT) generates star characters in PostgreSQL",
@@ -5259,7 +5750,10 @@ SalesData AS (
 )
 SELECT product_id, last_quarter_sales, qtd_sales
 FROM SalesData;`,
-    starterCode: `-- Quarterly sales Analysis\n-- Write your solution here\nSELECT *\nFROM sales;`,
+    starterCode: `-- Quarterly sales Analysis
+-- Write your solution here
+SELECT *
+FROM sales;`,
     businessImpact: `Quarterly sales comparison (last quarter total vs. quarter-to-date) is a standard financial KPI. DATE_TRUNC for quarter boundaries eliminates manual month calculations, and FULL OUTER JOIN preserves products that exist in only one quarter.`,
     optimizationTips: [
       "DATE_TRUNC('quarter', date) replaces MySQL's DATE_FORMAT + MOD + MONTH approach",
@@ -5391,7 +5885,10 @@ FROM teams t
 LEFT JOIN matches m ON m.host_team = t.team_id OR m.guest_team = t.team_id
 GROUP BY t.team_id, t.team_name
 ORDER BY num_points DESC, t.team_id ASC;`,
-    starterCode: `-- Team Points Calculation\n-- Write your solution here\nSELECT *\nFROM teams;`,
+    starterCode: `-- Team Points Calculation
+-- Write your solution here
+SELECT *
+FROM teams;`,
     businessImpact: `World Cup group stage point calculation (Win=3, Draw=1, Loss=0) from match results. The UNION ALL approach normalizes host/guest into a single team column, while the single-pass JOIN approach with nested CASE is more efficient for large datasets.`,
     optimizationTips: [
       "Single JOIN with OR + nested CASE avoids UNION ALL overhead",
@@ -5490,7 +5987,10 @@ SELECT
 FROM employees e
 LEFT JOIN promotion_multipliers pm ON e.id = pm.emp_id
 ORDER BY e.id;`,
-    starterCode: `-- Employees Current Salary\n-- Write your solution here\nSELECT *\nFROM employees;`,
+    starterCode: `-- Employees Current Salary
+-- Write your solution here
+SELECT *
+FROM employees;`,
     businessImpact: `Compound percentage salary calculation using EXP(SUM(LN())) is the mathematical trick for multiplying variable-rate increases without iteration. This pattern applies to compound interest, inflation-adjusted pricing, and any cumulative percentage growth calculation.`,
     optimizationTips: [
       "EXP(SUM(LN(1 + pct/100))) = product of (1 + pct/100) for all promotions",
@@ -5571,7 +6071,68 @@ INSERT INTO salary_history VALUES
 (2, '2020-06-01', 48000, 'Yes'),
 (2, '2021-06-01', 55000, 'Yes');
 `,
-    mySolution: null,
+    mySolution: `WITH salary_union AS (
+    SELECT
+        employee_id,
+        join_date AS change_date,
+        intial_salary AS salary,
+        'No' AS promotion
+    FROM employees
+    UNION ALL
+    SELECT
+        employee_id,
+        change_date,
+        salary,
+        promotion
+    FROM salary_history
+),
+cte AS (
+    SELECT
+        su.*,
+        RANK() OVER (PARTITION BY employee_id ORDER BY change_date DESC) AS rn_desc,
+        RANK() OVER (PARTITION BY employee_id ORDER BY change_date ASC) AS rn_asc,
+        LEAD(salary) OVER (PARTITION BY employee_id ORDER BY change_date DESC) AS prev_salary
+    FROM salary_union su
+),
+salary_growth_cte AS (
+    SELECT
+        employee_id,
+        MAX(CASE WHEN rn_desc = 1 THEN salary END) * 1.0 /
+        MAX(CASE WHEN rn_asc = 1 THEN salary END) AS salary_growth,
+        MIN(change_date) AS join_date
+    FROM cte
+    GROUP BY employee_id
+),
+decrease_flag AS (
+    SELECT
+        employee_id,
+        MAX(CASE WHEN prev_salary IS NOT NULL AND salary < prev_salary THEN 1 ELSE 0 END) AS has_decreased
+    FROM cte
+    GROUP BY employee_id
+)
+SELECT
+    c.employee_id,
+    MAX(CASE WHEN c.rn_desc = 1 THEN c.salary END) AS latest_salary,
+    SUM(CASE WHEN c.promotion = 'Yes' THEN 1 ELSE 0 END) AS total_promotions,
+    MAX(
+      CASE
+        WHEN c.prev_salary IS NOT NULL AND c.prev_salary > 0
+        THEN ROUND((c.salary - c.prev_salary) * 100.0 / c.prev_salary, 2)
+        ELSE 0.00
+      END
+    ) AS max_perc_change,
+    CASE
+        WHEN d.has_decreased = 1 THEN 'N'
+        ELSE 'Y'
+    END AS never_decreased,
+    ROW_NUMBER() OVER (
+        ORDER BY sg.salary_growth DESC, sg.join_date ASC
+    ) AS RankByGrowth
+FROM cte c
+JOIN salary_growth_cte sg ON c.employee_id = sg.employee_id
+JOIN decrease_flag d ON c.employee_id = d.employee_id
+GROUP BY c.employee_id, sg.salary_growth, sg.join_date, d.has_decreased
+ORDER BY c.employee_id;`,
     systemSolution: `WITH salary_union AS (
     SELECT
         employee_id,
@@ -5634,7 +6195,10 @@ JOIN salary_growth_cte sg ON c.employee_id = sg.employee_id
 JOIN decrease_flag d ON c.employee_id = d.employee_id
 GROUP BY c.employee_id, sg.salary_growth, sg.join_date, d.has_decreased
 ORDER BY c.employee_id;`,
-    starterCode: `-- Salary Growth Analysis\n-- Write your solution here\nSELECT *\nFROM employees;`,
+    starterCode: `-- Salary Growth Analysis
+-- Write your solution here
+SELECT *
+FROM employees;`,
     businessImpact: `Comprehensive salary progression analysis combining latest salary, promotion count, max percentage increase, decrease detection, and growth ranking provides a multi-dimensional view of employee performance for HR compensation reviews and retention planning.`,
     optimizationTips: [
       "UNION ALL combines initial salary with salary_history for complete timeline",
@@ -5735,7 +6299,10 @@ SELECT *
 FROM pivoted
 WHERE (second_order_date - first_order_date) <= 7
   AND (third_order_date - second_order_date) >= 30;`,
-    starterCode: `-- Customers with 3 Purchases\n-- Write your solution here\nSELECT *\nFROM orders;`,
+    starterCode: `-- Customers with 3 Purchases
+-- Write your solution here
+SELECT *
+FROM orders;`,
     businessImpact: `Purchase pattern detection (quick repeat within 7 days, then delayed 30+ days) identifies customer re-engagement behavior. This pattern often indicates trial-then-commitment behavior, useful for subscription conversion and lifecycle marketing triggers.`,
     optimizationTips: [
       "(date2 - date1) returns integer days in PostgreSQL, replacing DATEDIFF",
@@ -5789,7 +6356,30 @@ INSERT INTO logins VALUES
 ('1.2.3.4.5'),
 ('192.168.001.1');
 `,
-    mySolution: null,
+    mySolution: `SELECT
+  ip_address,
+  CASE
+    -- Not exactly 3 dots
+    WHEN LENGTH(ip_address) - LENGTH(REPLACE(ip_address, '.', '')) != 3 THEN 0
+    -- Any part is non-numeric
+    WHEN NOT SPLIT_PART(ip_address, '.', 1) ~ '^[0-9]+$' THEN 0
+    WHEN NOT SPLIT_PART(ip_address, '.', 2) ~ '^[0-9]+$' THEN 0
+    WHEN NOT SPLIT_PART(ip_address, '.', 3) ~ '^[0-9]+$' THEN 0
+    WHEN NOT SPLIT_PART(ip_address, '.', 4) ~ '^[0-9]+$' THEN 0
+    -- Any part > 255
+    WHEN CAST(SPLIT_PART(ip_address, '.', 1) AS INT) > 255 THEN 0
+    WHEN CAST(SPLIT_PART(ip_address, '.', 2) AS INT) > 255 THEN 0
+    WHEN CAST(SPLIT_PART(ip_address, '.', 3) AS INT) > 255 THEN 0
+    WHEN CAST(SPLIT_PART(ip_address, '.', 4) AS INT) > 255 THEN 0
+    -- Leading zeros
+    WHEN LENGTH(SPLIT_PART(ip_address, '.', 1)) != LENGTH(CAST(CAST(SPLIT_PART(ip_address, '.', 1) AS INT) AS VARCHAR)) THEN 0
+    WHEN LENGTH(SPLIT_PART(ip_address, '.', 2)) != LENGTH(CAST(CAST(SPLIT_PART(ip_address, '.', 2) AS INT) AS VARCHAR)) THEN 0
+    WHEN LENGTH(SPLIT_PART(ip_address, '.', 3)) != LENGTH(CAST(CAST(SPLIT_PART(ip_address, '.', 3) AS INT) AS VARCHAR)) THEN 0
+    WHEN LENGTH(SPLIT_PART(ip_address, '.', 4)) != LENGTH(CAST(CAST(SPLIT_PART(ip_address, '.', 4) AS INT) AS VARCHAR)) THEN 0
+    -- Passed all checks
+    ELSE 1
+  END AS is_valid
+FROM logins;`,
     systemSolution: `SELECT
   ip_address,
   CASE
@@ -5814,7 +6404,10 @@ INSERT INTO logins VALUES
     ELSE 1
   END AS is_valid
 FROM logins;`,
-    starterCode: `-- IPv4 Validator\n-- Write your solution here\nSELECT *\nFROM logins;`,
+    starterCode: `-- IPv4 Validator
+-- Write your solution here
+SELECT *
+FROM logins;`,
     businessImpact: `IP address validation in pure SQL is useful for data cleansing ETL pipelines, firewall log analysis, and user login auditing. SPLIT_PART replaces MySQL's SUBSTRING_INDEX, while ~ replaces REGEXP for pattern matching in PostgreSQL.`,
     optimizationTips: [
       "SPLIT_PART(str, '.', N) replaces MySQL's SUBSTRING_INDEX in PostgreSQL",
@@ -5873,7 +6466,23 @@ INSERT INTO emp_details VALUES
 ('Frank', 'Mumbai'),
 ('Grace', 'Mumbai');
 `,
-    mySolution: null,
+    mySolution: `WITH cte AS (
+    SELECT *, ROW_NUMBER() OVER (PARTITION BY city ORDER BY city) AS rn
+    FROM emp_details
+),
+cte2 AS (
+    SELECT *, CEIL(rn / 3.0) AS team_group
+    FROM cte
+),
+cte3 AS (
+    SELECT city,
+           STRING_AGG(emp_name, ',' ORDER BY emp_name) AS team
+    FROM cte2
+    GROUP BY city, team_group
+)
+SELECT *,
+       CONCAT('Team', ROW_NUMBER() OVER (ORDER BY city)) AS team_name
+FROM cte3;`,
     systemSolution: `WITH cte AS (
     SELECT *, ROW_NUMBER() OVER (PARTITION BY city ORDER BY city) AS rn
     FROM emp_details
@@ -5891,7 +6500,10 @@ cte3 AS (
 SELECT *,
        CONCAT('Team', ROW_NUMBER() OVER (ORDER BY city)) AS team_name
 FROM cte3;`,
-    starterCode: `-- Teams\n-- Write your solution here\nSELECT *\nFROM emp_details;`,
+    starterCode: `-- Teams
+-- Write your solution here
+SELECT *
+FROM emp_details;`,
     businessImpact: `Automatic team formation by city with configurable group size (3) uses integer division for group assignment and STRING_AGG for member aggregation. This pattern applies to event planning, sports league grouping, and workforce organization.`,
     optimizationTips: [
       "STRING_AGG(name, ',' ORDER BY name) replaces GROUP_CONCAT in PostgreSQL",
@@ -5959,7 +6571,37 @@ INSERT INTO transactions VALUES
 ('2021-07-06 16:00:00', 'Bob', 'BUY', 40.00, 'CANCELED'),
 ('2021-06-28 08:00:00', 'Alice', 'BUY', 80.00, 'COMPLETED');
 `,
-    mySolution: null,
+    mySolution: `WITH july_tx AS (
+    SELECT *
+    FROM transactions
+    WHERE dt >= '2021-07-01'
+      AND dt < '2021-08-01'
+),
+customer_agg AS (
+    SELECT
+        customer,
+        SUM(CASE WHEN type = 'BUY' THEN 1 ELSE 0 END) AS buy,
+        SUM(CASE WHEN type = 'SELL' THEN 1 ELSE 0 END) AS sell,
+        SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END) AS completed,
+        SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END) AS pending,
+        SUM(CASE WHEN status = 'CANCELED' THEN 1 ELSE 0 END) AS canceled,
+        ROUND(
+            SUM(
+                CASE
+                    WHEN status = 'PENDING' THEN 0
+                    WHEN status = 'COMPLETED' AND type = 'BUY' THEN amount
+                    WHEN status = 'COMPLETED' AND type = 'SELL' THEN 0.10 * amount
+                    WHEN status = 'CANCELED' THEN -0.01 * amount
+                END
+            ),
+            2
+        ) AS total
+    FROM july_tx
+    GROUP BY customer
+)
+SELECT customer, buy, sell, completed, pending, canceled, total
+FROM customer_agg
+ORDER BY total DESC;`,
     systemSolution: `WITH july_tx AS (
     SELECT *
     FROM transactions
@@ -5991,7 +6633,10 @@ customer_agg AS (
 SELECT customer, buy, sell, completed, pending, canceled, total
 FROM customer_agg
 ORDER BY total DESC;`,
-    starterCode: `-- Marketing Analytics\n-- Write your solution here\nSELECT *\nFROM transactions;`,
+    starterCode: `-- Marketing Analytics
+-- Write your solution here
+SELECT *
+FROM transactions;`,
     businessImpact: `E-commerce revenue calculation with multiple transaction types (BUY/SELL) and statuses (COMPLETED/PENDING/CANCELED) models real marketplace economics. SELL transactions generate 10% commission revenue, while CANCELED transactions incur 1% penalty deductions.`,
     optimizationTips: [
       "Nested CASE WHEN handles type + status combinations for revenue",
@@ -6062,7 +6707,36 @@ INSERT INTO usage_data VALUES
 ('U2', '2024-02-10', 'app', 25),
 ('U3', '2024-02-15', 'web', 50);
 `,
-    mySolution: null,
+    mySolution: `WITH consolidated_usage AS (
+    SELECT
+        u.user_id,
+        TO_CHAR(u.registration_date, 'YYYY-MM') AS registration_month,
+        SUM(CASE
+            WHEN usg.usage_date <= u.registration_date + INTERVAL '1 month' THEN usg.time_spent
+            ELSE 0
+        END) AS m1_time_spent,
+        SUM(CASE
+            WHEN usg.usage_date > u.registration_date + INTERVAL '1 month'
+                 AND usg.usage_date <= u.registration_date + INTERVAL '2 months' THEN usg.time_spent
+            ELSE 0
+        END) AS m2_time_spent,
+        SUM(CASE
+            WHEN usg.usage_date > u.registration_date + INTERVAL '2 months'
+                 AND usg.usage_date <= u.registration_date + INTERVAL '3 months' THEN usg.time_spent
+            ELSE 0
+        END) AS m3_time_spent
+    FROM users u
+    LEFT JOIN usage_data usg ON u.user_id = usg.user_id
+    GROUP BY u.user_id, TO_CHAR(u.registration_date, 'YYYY-MM')
+)
+SELECT
+    registration_month,
+    COUNT(*) AS total_users,
+    COALESCE(ROUND(SUM(CASE WHEN m1_time_spent >= 30 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2), 0) AS m1_retention,
+    COALESCE(ROUND(SUM(CASE WHEN m2_time_spent >= 30 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2), 0) AS m2_retention,
+    COALESCE(ROUND(SUM(CASE WHEN m3_time_spent >= 30 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2), 0) AS m3_retention
+FROM consolidated_usage
+GROUP BY registration_month;`,
     systemSolution: `WITH consolidated_usage AS (
     SELECT
         u.user_id,
@@ -6093,7 +6767,10 @@ SELECT
     COALESCE(ROUND(SUM(CASE WHEN m3_time_spent >= 30 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2), 0) AS m3_retention
 FROM consolidated_usage
 GROUP BY registration_month;`,
-    starterCode: `-- Cohort Retention\n-- Write your solution here\nSELECT *\nFROM users;`,
+    starterCode: `-- Cohort Retention
+-- Write your solution here
+SELECT *
+FROM users;`,
     businessImpact: `Cohort retention analysis tracks what percentage of users from each registration month remain 'engaged' (>= 30 minutes) in months 1-3 post-registration. This is a core product analytics metric for measuring onboarding effectiveness and long-term user value.`,
     optimizationTips: [
       "TO_CHAR(date, 'YYYY-MM') replaces MySQL's DATE_FORMAT for month grouping",
@@ -6204,7 +6881,48 @@ INSERT INTO flights VALUES
 ('F4', 'DEL', 'MAA', '2024-01-01 07:00:00', '2024-01-01 10:30:00'),
 ('F5', 'BLR', 'BOM', '2024-01-01 13:00:00', '2024-01-01 14:00:00');
 `,
-    mySolution: null,
+    mySolution: `WITH user_start_ports AS (
+    SELECT u.user_id, a.port_code, a.city_name AS start_city
+    FROM users u
+    JOIN airports a ON a.city_name = u.source_city
+),
+user_end_ports AS (
+    SELECT u.user_id, a.port_code, a.city_name AS end_city
+    FROM users u
+    JOIN airports a ON a.city_name = u.destination_city
+),
+direct_routes AS (
+    SELECT
+        sp.user_id,
+        sp.start_city AS trip_start_city,
+        NULL AS middle_city,
+        ep.end_city AS trip_end_city,
+        EXTRACT(EPOCH FROM (f.end_time - f.start_time)) / 60 AS trip_time,
+        CAST(f.flight_id AS VARCHAR) AS flight_ids
+    FROM flights f
+    JOIN user_start_ports sp ON f.start_port = sp.port_code
+    JOIN user_end_ports ep ON f.end_port = ep.port_code AND sp.user_id = ep.user_id
+),
+one_stop_routes AS (
+    SELECT
+        sp.user_id,
+        sp.start_city AS trip_start_city,
+        mid.city_name AS middle_city,
+        ep.end_city AS trip_end_city,
+        EXTRACT(EPOCH FROM (f2.end_time - f1.start_time)) / 60 AS trip_time,
+        CONCAT(f1.flight_id, ';', f2.flight_id) AS flight_ids
+    FROM flights f1
+    JOIN flights f2
+        ON f1.end_port = f2.start_port
+        AND f1.end_time <= f2.start_time
+    JOIN user_start_ports sp ON f1.start_port = sp.port_code
+    JOIN user_end_ports ep ON f2.end_port = ep.port_code AND sp.user_id = ep.user_id
+    JOIN airports mid ON f1.end_port = mid.port_code
+)
+SELECT * FROM direct_routes
+UNION ALL
+SELECT * FROM one_stop_routes
+ORDER BY user_id, trip_time;`,
     systemSolution: `WITH user_start_ports AS (
     SELECT u.user_id, a.port_code, a.city_name AS start_city
     FROM users u
@@ -6247,7 +6965,10 @@ SELECT * FROM direct_routes
 UNION ALL
 SELECT * FROM one_stop_routes
 ORDER BY user_id, trip_time;`,
-    starterCode: `-- Flight Planner System\n-- Write your solution here\nSELECT *\nFROM users;`,
+    starterCode: `-- Flight Planner System
+-- Write your solution here
+SELECT *
+FROM users;`,
     businessImpact: `Flight route planning with direct and one-stop connections models real travel search engines. The query joins users' city preferences to airport codes, finds matching flights, and calculates total trip time including layovers for optimal route recommendation.`,
     optimizationTips: [
       "EXTRACT(EPOCH FROM interval) / 60 replaces TIMESTAMPDIFF(MINUTE) in PostgreSQL",
@@ -6329,7 +7050,31 @@ INSERT INTO orders VALUES
 (104, 2, '2024-01-01', 3),
 (105, 2, '2024-01-02', 3),
 (106, 3, '2024-01-01', 10);`,
-    mySolution: null,
+    mySolution: `WITH cte AS (
+  SELECT o.*,
+    SUM(quantity_requested) OVER(PARTITION BY o.product_id ORDER BY order_date) AS running_requested_qty,
+    p.available_quantity,
+    p.product_name
+  FROM orders o
+  INNER JOIN products p ON o.product_id = p.product_id
+)
+SELECT 
+  order_id,
+  product_name,
+  quantity_requested,
+  CASE 
+    WHEN running_requested_qty <= available_quantity THEN quantity_requested
+    WHEN available_quantity - (running_requested_qty - quantity_requested) > 0 
+      THEN available_quantity - (running_requested_qty - quantity_requested)
+    ELSE 0 
+  END AS qty_fulfilled,
+  CASE 
+    WHEN running_requested_qty <= available_quantity THEN 'Full Order'
+    WHEN available_quantity - (running_requested_qty - quantity_requested) > 0 THEN 'Partial Order'
+    ELSE 'No Order' 
+  END AS comments
+FROM cte
+ORDER BY order_id;`,
     systemSolution: `WITH cte AS (
   SELECT o.*,
     SUM(quantity_requested) OVER(PARTITION BY o.product_id ORDER BY order_date) AS running_requested_qty,
@@ -6425,7 +7170,25 @@ INSERT INTO orders VALUES
 (9, 105, '2024-03-15'),
 (10, 101, '2024-04-01'),
 (11, 102, '2024-04-10');`,
-    mySolution: null,
+    mySolution: `WITH cte AS (
+  SELECT DISTINCT 
+    EXTRACT(YEAR FROM order_date) AS year, 
+    EXTRACT(MONTH FROM order_date) AS month, 
+    customer_id 
+  FROM orders
+)
+SELECT 
+  cm.year AS current_year,
+  cm.month AS current_month,
+  fm.year AS future_year,
+  fm.month AS future_month,
+  COUNT(DISTINCT cm.customer_id) AS total_customers,
+  COUNT(DISTINCT CASE WHEN fm.customer_id = cm.customer_id THEN fm.customer_id END) AS retained_customers
+FROM cte cm
+INNER JOIN cte fm 
+  ON (fm.year > cm.year OR (fm.year = cm.year AND fm.month > cm.month))
+GROUP BY cm.year, cm.month, fm.year, fm.month
+ORDER BY cm.year, cm.month, fm.year, fm.month;`,
     systemSolution: `WITH cte AS (
   SELECT DISTINCT 
     EXTRACT(YEAR FROM order_date) AS year, 
@@ -6522,7 +7285,25 @@ INSERT INTO service_status VALUES
 ('Cache', 'down', '2024-01-01 10:06:00'),
 ('Cache', 'down', '2024-01-01 10:07:00'),
 ('Cache', 'up', '2024-01-01 10:08:00');`,
-    mySolution: null,
+    mySolution: `WITH consecutive_down AS (
+  SELECT 
+    service_name,
+    updated_time,
+    status,
+    ROW_NUMBER() OVER (PARTITION BY service_name ORDER BY updated_time) AS row_num,
+    ROW_NUMBER() OVER (PARTITION BY service_name, status ORDER BY updated_time) AS status_row_num
+  FROM service_status
+)
+SELECT 
+  service_name,
+  MIN(updated_time) AS down_start_time,
+  MAX(updated_time) AS down_end_time,
+  COUNT(*) AS down_minutes
+FROM consecutive_down
+WHERE status = 'down'
+GROUP BY service_name, row_num - status_row_num
+HAVING COUNT(*) >= 5
+ORDER BY down_minutes DESC;`,
     systemSolution: `WITH consecutive_down AS (
   SELECT 
     service_name,
@@ -6631,7 +7412,43 @@ INSERT INTO leave_requests VALUES
 (4, 2, '2024-01-20', '2024-01-22'),
 (5, 2, '2024-02-15', '2024-02-16'),
 (6, 3, '2024-01-10', '2024-01-12');`,
-    mySolution: null,
+    mySolution: `WITH RECURSIVE cte AS (
+  SELECT lr.*, e.leave_balance_from_2023,
+    EXTRACT(MONTH FROM leave_start_date) AS leave_start_month,
+    (leave_end_date - leave_start_date) + 1 AS leave_days,
+    ROW_NUMBER() OVER(PARTITION BY lr.employee_id ORDER BY lr.leave_start_date) AS rn
+  FROM leave_requests lr 
+  INNER JOIN employees e ON lr.employee_id = e.employee_id
+),
+r_cte AS (
+  SELECT request_id, leave_start_date, leave_end_date, employee_id, leave_start_month,
+    CASE WHEN leave_balance_from_2023 + leave_start_month * 1.5 >= leave_days 
+      THEN leave_balance_from_2023 + leave_start_month * 1.5 - leave_days
+      ELSE leave_balance_from_2023 + leave_start_month * 1.5
+    END AS balance_leaves,
+    CASE WHEN leave_balance_from_2023 + leave_start_month * 1.5 >= leave_days 
+      THEN 'Approved' ELSE 'Rejected' 
+    END AS status,
+    rn, leave_days
+  FROM cte WHERE rn = 1
+  
+  UNION ALL
+  
+  SELECT cte.request_id, cte.leave_start_date, cte.leave_end_date, cte.employee_id, cte.leave_start_month,
+    CASE WHEN r_cte.balance_leaves + (cte.leave_start_month - r_cte.leave_start_month) * 1.5 >= cte.leave_days
+      THEN r_cte.balance_leaves + (cte.leave_start_month - r_cte.leave_start_month) * 1.5 - cte.leave_days
+      ELSE r_cte.balance_leaves + (cte.leave_start_month - r_cte.leave_start_month) * 1.5 
+    END AS balance_leaves,
+    CASE WHEN r_cte.balance_leaves + (cte.leave_start_month - r_cte.leave_start_month) * 1.5 >= cte.leave_days
+      THEN 'Approved' ELSE 'Rejected' 
+    END AS status,
+    cte.rn, cte.leave_days
+  FROM cte 
+  INNER JOIN r_cte ON cte.employee_id = r_cte.employee_id AND cte.rn = r_cte.rn + 1
+)
+SELECT request_id, employee_id, leave_start_date, leave_end_date, status
+FROM r_cte
+ORDER BY request_id;`,
     systemSolution: `WITH RECURSIVE cte AS (
   SELECT lr.*, e.leave_balance_from_2023,
     EXTRACT(MONTH FROM leave_start_date) AS leave_start_month,
@@ -6746,7 +7563,35 @@ INSERT INTO rating_table VALUES
 ('2024-01-01 09:00:00', 'D3', 12, 3),
 ('2024-01-01 10:00:00', 'D3', 13, 2),
 ('2024-01-01 11:00:00', 'D3', 14, 3);`,
-    mySolution: null,
+    mySolution: `WITH RankedRatings AS (
+  SELECT 
+    driver_id, 
+    trip_id,
+    trip_time,
+    rating,
+    trip_id - ROW_NUMBER() OVER (PARTITION BY driver_id ORDER BY trip_time) AS streak_group
+  FROM rating_table
+  WHERE rating >= 4
+),
+StreakLengths AS (
+  SELECT 
+    driver_id, 
+    streak_group,
+    COUNT(*) - 1 AS streak_length
+  FROM RankedRatings
+  GROUP BY driver_id, streak_group
+),
+MaxStreaks AS (
+  SELECT 
+    driver_id, 
+    MAX(streak_length) AS max_streak
+  FROM StreakLengths
+  GROUP BY driver_id
+)
+SELECT driver_id, max_streak
+FROM MaxStreaks
+WHERE max_streak > 0
+ORDER BY max_streak DESC, driver_id DESC;`,
     systemSolution: `WITH RankedRatings AS (
   SELECT 
     driver_id, 
@@ -6852,7 +7697,28 @@ INSERT INTO items VALUES
 (7, 2),
 (8, 4),
 (9, 1);`,
-    mySolution: null,
+    mySolution: `WITH RECURSIVE cte AS (
+  SELECT id, weight, weight AS running_sum, 1 AS box_number 
+  FROM items
+  WHERE id = 1
+  
+  UNION ALL
+  
+  SELECT 
+    b.id, 
+    b.weight,
+    CASE WHEN cte.running_sum + b.weight <= 5 
+      THEN cte.running_sum + b.weight 
+      ELSE b.weight 
+    END AS running_sum,
+    CASE WHEN cte.running_sum + b.weight <= 5 
+      THEN cte.box_number 
+      ELSE cte.box_number + 1 
+    END AS box_number
+  FROM items b
+  INNER JOIN cte ON b.id = cte.id + 1
+)
+SELECT id, weight, box_number FROM cte;`,
     systemSolution: `WITH RECURSIVE cte AS (
   SELECT id, weight, weight AS running_sum, 1 AS box_number 
   FROM items
@@ -6970,7 +7836,34 @@ INSERT INTO rides VALUES
 
 INSERT INTO calendar_dim 
 SELECT generate_series('2023-01-01'::date, '2023-12-31'::date, '1 day'::interval)::date;`,
-    mySolution: null,
+    mySolution: `WITH cal AS (
+  SELECT 
+    EXTRACT(MONTH FROM cal_date) AS cal_month, 
+    MAX(cal_date) AS month_end_date
+  FROM calendar_dim
+  GROUP BY EXTRACT(MONTH FROM cal_date)
+),
+join_ride AS (
+  SELECT driver_id, join_date AS join_ride_date FROM drivers
+  UNION 
+  SELECT driver_id, ride_date FROM rides
+),
+days_since_last_ride_monthend AS (
+  SELECT 
+    cal.month_end_date, 
+    jr.driver_id, 
+    MAX(jr.join_ride_date) AS latest_ride,
+    cal.month_end_date - MAX(jr.join_ride_date) AS days_since_last_ride
+  FROM cal
+  LEFT JOIN join_ride jr ON cal.month_end_date >= jr.join_ride_date
+  GROUP BY cal.month_end_date, jr.driver_id
+)
+SELECT 
+  month_end_date, 
+  SUM(CASE WHEN days_since_last_ride <= 28 THEN 1 ELSE 0 END) AS no_of_active_drivers
+FROM days_since_last_ride_monthend
+GROUP BY month_end_date
+ORDER BY month_end_date;`,
     systemSolution: `WITH cal AS (
   SELECT 
     EXTRACT(MONTH FROM cal_date) AS cal_month, 
@@ -7073,7 +7966,48 @@ INSERT INTO detailed_oos_events VALUES
 ('PROD2', 1, '2024-01-02'),
 ('PROD2', 1, '2024-01-04'),
 ('PROD2', 1, '2024-01-11');`,
-    mySolution: null,
+    mySolution: `WITH RECURSIVE ranked_data AS (
+  SELECT 
+    master_id,
+    marketplace_id,
+    oos_date,
+    ROW_NUMBER() OVER (PARTITION BY master_id, marketplace_id ORDER BY oos_date) AS event_id
+  FROM detailed_oos_events
+),
+oos_events AS (
+  SELECT 
+    master_id,
+    marketplace_id,
+    oos_date,
+    event_id,
+    1 AS valid_flag
+  FROM ranked_data
+  WHERE event_id = 1
+
+  UNION ALL
+
+  SELECT 
+    e.master_id,
+    e.marketplace_id,
+    CASE 
+      WHEN e.oos_date >= o.oos_date + INTERVAL '7 days' THEN e.oos_date
+      ELSE o.oos_date
+    END AS oos_date,
+    e.event_id,
+    CASE 
+      WHEN e.oos_date >= o.oos_date + INTERVAL '7 days' THEN 1
+      ELSE 0
+    END AS valid_flag
+  FROM ranked_data e
+  INNER JOIN oos_events o
+    ON e.master_id = o.master_id
+    AND e.marketplace_id = o.marketplace_id
+    AND e.event_id = o.event_id + 1
+)
+SELECT master_id, marketplace_id, oos_date
+FROM oos_events
+WHERE valid_flag = 1
+ORDER BY master_id, marketplace_id, oos_date;`,
     systemSolution: `WITH RECURSIVE ranked_data AS (
   SELECT 
     master_id,
