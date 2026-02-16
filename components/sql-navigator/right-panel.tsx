@@ -68,6 +68,7 @@ export function RightPanel({ starterCode, questionId }: RightPanelProps) {
   const [questionData, setQuestionData] = useState<{
     sampleData: string
     systemSolution: string
+    mySolution: string | null
   } | null>(null)
   const consoleRef = useRef<HTMLDivElement>(null)
 
@@ -77,7 +78,14 @@ export function RightPanel({ starterCode, questionId }: RightPanelProps) {
       .then((r) => r.json())
       .then((data) => {
         if (!cancelled && data.sampleData != null && data.systemSolution != null) {
-          setQuestionData({ sampleData: data.sampleData, systemSolution: data.systemSolution })
+          setQuestionData({
+            sampleData: data.sampleData,
+            systemSolution: data.systemSolution,
+            mySolution: data.mySolution ?? null,
+          })
+          if (data.mySolution) {
+            setCode(data.mySolution)
+          }
         }
       })
       .catch(() => {
