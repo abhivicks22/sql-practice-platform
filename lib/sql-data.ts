@@ -8092,6 +8092,7 @@ export const questions: Question[] = sqlQuestionsData.map((q) => ({
   businessImpact: q.businessImpact,
   optimizationTips: q.optimizationTips,
   edgeCases: q.edgeCases.map((text) => ({ text, checked: false })),
+  expectedOutput: q.expectedOutput,
   starterCode: q.starterCode,
 }));
 
