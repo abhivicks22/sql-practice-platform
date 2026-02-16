@@ -63,6 +63,7 @@ export function LeftPanel({
     question.edgeCases.map((ec) => ec.checked)
   )
   const [geminiLoading, setGeminiLoading] = useState(false)
+  const [showExpectedOutput, setShowExpectedOutput] = useState(false)
   const [geminiError, setGeminiError] = useState<string | null>(null)
   const [geminiResult, setGeminiResult] = useState<{
     businessImpact: string
@@ -227,16 +228,27 @@ export function LeftPanel({
 
 
             {question.expectedOutput && (
-              <div className="space-y-3 pt-2">
-                <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <div className="space-y-0 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowExpectedOutput((v) => !v)}
+                  className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors w-full"
+                >
                   <ListChecks className="h-3.5 w-3.5" />
                   Expected Output
-                </h3>
-                <div className="glass-panel p-3 overflow-x-auto bg-black/20">
-                  <pre className="font-mono text-xs leading-relaxed text-foreground/90 whitespace-pre">
-                    {question.expectedOutput}
-                  </pre>
-                </div>
+                  {showExpectedOutput ? (
+                    <ChevronUp className="h-3.5 w-3.5 ml-auto" />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5 ml-auto" />
+                  )}
+                </button>
+                {showExpectedOutput && (
+                  <div className="glass-panel p-3 overflow-x-auto bg-black/20 mt-2">
+                    <pre className="font-mono text-xs leading-relaxed text-foreground/90 whitespace-pre">
+                      {question.expectedOutput}
+                    </pre>
+                  </div>
+                )}
               </div>
             )}
           </div>
