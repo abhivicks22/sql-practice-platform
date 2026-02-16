@@ -269,12 +269,11 @@ export function RightPanel({ starterCode, questionId }: RightPanelProps) {
               {output.map((line, i) => (
                 <div
                   key={i}
-                  className={
-                    line.startsWith(">") ? "text-cyan"
+                  className={`whitespace-pre ${line.startsWith(">") ? "text-cyan"
                       : line.includes("✓") || line.includes("row(s)") ? "text-theme"
-                      : line.includes("✗") || line.includes("Error") ? "text-red-400"
-                      : "text-muted-foreground"
-                  }
+                        : line.includes("✗") || line.includes("Error") ? "text-red-400"
+                          : "text-muted-foreground"
+                    }`}
                 >
                   {line || "\u00A0"}
                 </div>

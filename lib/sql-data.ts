@@ -125,12 +125,14 @@ FROM product_reviews;`,
       "Empty review_text or NULL values",
       "Review with 'not amazing but excellent' — should be excluded due to 'not amazing'"
     ],
-    expectedOutput: `+-----------+------------+------------------------------------------+
-| review_id | product_id | review_text                              |
-+-----------+------------+------------------------------------------+
-| 1         | 101        | The product is amazing!                  |
-| 3         | 103        | Excellent value for money.               |
-+-----------+------------+------------------------------------------+`
+    expectedOutput: `+-----------+------------+-----------------------------------+
+| review_id | product_id | review_text                       |
++-----------+------------+-----------------------------------+
+| 1         | 101        | This product is excellent quality |
+| 3         | 103        | Absolutely amazing experience     |
+| 5         | 105        | Really excellent value for money  |
+| 8         | 108        | It was Excellent in every way     |
++-----------+------------+-----------------------------------+`
   },
 
   {
@@ -193,16 +195,16 @@ SELECT 1;`,
       "Email with no domain part (malformed data)",
       "Case sensitivity: 'Gmail.com' vs 'gmail.com'"
     ],
-    expectedOutput: `+-------------------+-----------------+
-| email             | domain_name     |
-+-------------------+-----------------+
-| alice@gmail.com   | gmail.com       |
-| bob@yahoo.com     | yahoo.com       |
-| carol@outlook.com | outlook.com     |
-| dave@gmail.com    | gmail.com       |
-| eve@company.org   | company.org     |
-| frank@yahoo.com   | yahoo.com       |
-+-------------------+-----------------+`
+    expectedOutput: `+-------------------+-------------+
+| email             | domain_name |
++-------------------+-------------+
+| alice@gmail.com   | gmail.com   |
+| bob@yahoo.com     | yahoo.com   |
+| carol@outlook.com | outlook.com |
+| dave@gmail.com    | gmail.com   |
+| eve@company.org   | company.org |
+| frank@yahoo.com   | yahoo.com   |
++-------------------+-------------+`
   },
 
   {
@@ -389,7 +391,6 @@ FROM employee;`,
 +--------+--------+-------------+
 | 1      | 80000  | Engineering |
 | 2      | 90000  | Engineering |
-| 4      | 70000  | Marketing   |
 | 6      | 95000  | Sales       |
 | 8      | 75000  | Sales       |
 +--------+--------+-------------+`
@@ -993,13 +994,13 @@ FROM orders;`,
       "Sales exactly equal between two years \u2014 strictly greater required",
       "Product with sales in only some months"
     ],
-    expectedOutput: `+------------+-------+------------+------------+------------+
-| product_id | month | sales_2022 | sales_2023 | sales_2024 |
-+------------+-------+------------+------------+------------+
-| 1          | 1     | 100        | 300        | 500        |
-| 2          | 1     | 400        | 450        | 500        |
-| 2          | 6     | 300        | 350        | 400        |
-+------------+-------+------------+------------+------------+`
+    expectedOutput: `+------------+-------------+------------+------------+------------+
+| product_id | order_month | sales_2022 | sales_2023 | sales_2024 |
++------------+-------------+------------+------------+------------+
+| 1          | 1           | 250        | 300        | 500        |
+| 2          | 1           | 400        | 450        | 500        |
+| 2          | 6           | 300        | 350        | 400        |
++------------+-------------+------------+------------+------------+`
   },
 
   {
@@ -1101,7 +1102,16 @@ FROM bookings;`,
       "Booking with NULL check_in or check_out dates",
       "Single-night booking (check_in and check_out one day apart)",
       "Booking spanning into the next month beyond calendar_dim range"
-    ]
+    ],
+    expectedOutput: `+---------+-----------------------------------------------------------+-----------+
+| room_id | book_date                                                 | customers |
++---------+-----------------------------------------------------------+-----------+
+| 101     | Tue Apr 02 2024 17:00:00 GMT-0700 (Pacific Daylight Time) | 1,2       |
+| 101     | Wed Apr 03 2024 17:00:00 GMT-0700 (Pacific Daylight Time) | 1,2       |
+| 101     | Fri Apr 05 2024 17:00:00 GMT-0700 (Pacific Daylight Time) | 2,3       |
+| 103     | Tue Apr 02 2024 17:00:00 GMT-0700 (Pacific Daylight Time) | 6,7       |
+| 103     | Wed Apr 03 2024 17:00:00 GMT-0700 (Pacific Daylight Time) | 6,7       |
++---------+-----------------------------------------------------------+-----------+`
   },
 
   {
@@ -1228,7 +1238,15 @@ FROM people;`,
       "Person who is both a parent and a child",
       "Two parents of same gender (data quality issue)",
       "Orphan records in relations table (p_id not in people)"
-    ]
+    ],
+    expectedOutput: `+------------+-------------+-------------+
+| child_name | mother_name | father_name |
++------------+-------------+-------------+
+| Charlie    | Alice       | Bob         |
+| Eve        | Alice       | Bob         |
+| Grace      | Diana       | Frank       |
+| Henry      | Diana       | NULL        |
++------------+-------------+-------------+`
   },
 
   {
@@ -1323,7 +1341,14 @@ FROM elections;`,
       "Party with exactly 50% of seats \u2014 strictly greater means they don't win",
       "District with only one candidate",
       "Candidate with zero votes"
-    ]
+    ],
+    expectedOutput: `+------------+-----------+--------+
+| party_name | seats_won | result |
++------------+-----------+--------+
+| PartyA     | 3         | Winner |
+| PartyB     | 2         | Loser  |
+| PartyC     | 2         | Loser  |
++------------+-----------+--------+`
   },
 
   {
@@ -1420,7 +1445,12 @@ FROM tickets;`,
       "DEL→BOM and BOM→DEL are different routes per problem specification",
       "Round trip ticket already counted from origin→dest, UNION ALL adds dest→origin",
       "Route with only round-trip tickets vs only one-way tickets"
-    ]
+    ],
+    expectedOutput: `+--------+-------------+------+
+| origin | destination | tc   |
++--------+-------------+------+
+| BOM    | DEL         | 270  |
++--------+-------------+------+`
   },
 
   {
@@ -1519,7 +1549,14 @@ FROM credit_card_transactions;`,
       "Tied spending between card types \u2014 RANK gives same rank to both",
       "City with NULL amounts \u2014 affects SUM",
       "Card type with zero transactions in a city"
-    ]
+    ],
+    expectedOutput: `+---------+----------------------+---------------------+
+| city    | highest_expense_type | lowest_expense_type |
++---------+----------------------+---------------------+
+| Chennai | Platinum             | Silver              |
+| Delhi   | Platinum             | Silver              |
+| Mumbai  | Gold                 | Silver              |
++---------+----------------------+---------------------+`
   },
 
   {
@@ -1596,7 +1633,14 @@ FROM user_passwords;`,
       "Leading or trailing spaces in password",
       "NULL password values",
       "Special characters not in the allowed set (e.g., ! or ?)"
-    ]
+    ],
+    expectedOutput: `+---------+-----------+
+| user_id | user_name |
++---------+-----------+
+| 1       | Alice     |
+| 4       | Dave      |
+| 8       | Henry     |
++---------+-----------+`
   },
 
   {
@@ -1671,7 +1715,17 @@ FROM student_courses;`,
       "Student with multiple major flags set to 'Y' \u2014 returns multiple rows",
       "Student with no courses at all \u2014 not in the table",
       "All courses for a student are electives (major_flag='N') with >1 course"
-    ]
+    ],
+    expectedOutput: `+------------+-----------+
+| student_id | course_id |
++------------+-----------+
+| 1          | 101       |
+| 2          | 201       |
+| 3          | 301       |
+| 4          | 401       |
+| 5          | 501       |
+| 5          | 502       |
++------------+-----------+`
   },
 
   {
@@ -1795,7 +1849,12 @@ FROM products;`,
       "New city added \u2014 query automatically requires sales in new city",
       "Product with sales but not in products table (orphan records)",
       "City with no sales at all for any product"
-    ]
+    ],
+    expectedOutput: `+--------------+
+| product_name |
++--------------+
+| Laptop       |
++--------------+`
   },
 
   {
@@ -1879,7 +1938,15 @@ FROM reel;`,
       "Cumulative views decreasing (data correction) \u2014 negative daily views",
       "Single-day data for a reel-state \u2014 can't calculate daily average with LAG",
       "Same reel in multiple states \u2014 partitioned correctly"
-    ]
+    ],
+    expectedOutput: `+---------+------------+-----------------+
+| reel_id | state      | avg_daily_views |
++---------+------------+-----------------+
+| 3       | Texas      | 3000.00         |
+| 1       | California | 1400.00         |
+| 2       | California | 700.00          |
+| 1       | Texas      | 600.00          |
++---------+------------+-----------------+`
   },
 
   {
@@ -1946,7 +2013,26 @@ FROM numbers;`,
       "Negative n values \u2014 sequence_length never < negative, no expansion",
       "NULL n value \u2014 comparisons with NULL fail, no expansion",
       "Very large n \u2014 could exceed recursive query limits"
-    ]
+    ],
+    expectedOutput: `+-----------------+
+| expanded_number |
++-----------------+
+| 1               |
+| 2               |
+| 2               |
+| 3               |
+| 3               |
+| 3               |
+| 4               |
+| 4               |
+| 4               |
+| 4               |
+| 5               |
+| 5               |
+| 5               |
+| 5               |
+| 5               |
++-----------------+`
   },
 
   {
@@ -2064,7 +2150,16 @@ FROM emp_2020;`,
       "Employee only in 2021 \u2014 new hire",
       "Employee with NULL designation in either year",
       "Same emp_id with different designations \u2014 promoted (demotion not possible per assumption)"
-    ]
+    ],
+    expectedOutput: `+--------+----------+
+| emp_id | comment  |
++--------+----------+
+| 1      | Promoted |
+| 3      | Resigned |
+| 4      | Promoted |
+| 5      | Resigned |
+| 6      | New Hire |
++--------+----------+`
   },
 
   {
@@ -2181,7 +2276,16 @@ FROM employees;`,
       "Employee only in 2021 \u2014 new hire",
       "Employee with multiple records in same year",
       "NULL designation in either year"
-    ]
+    ],
+    expectedOutput: `+--------+----------+
+| emp_id | comment  |
++--------+----------+
+| 1      | Promoted |
+| 3      | Resigned |
+| 4      | Promoted |
+| 5      | Resigned |
+| 6      | New Hire |
++--------+----------+`
   },
 
   {
@@ -2257,7 +2361,8 @@ FROM user_sessions;`,
       "User with gap in login dates \u2014 cnt < expected, not consistent",
       "NULL login_timestamp values",
       "Timezone considerations if logins cross midnight"
-    ]
+    ],
+    expectedOutput: `(0 rows)`
   },
 
   {
@@ -2350,7 +2455,14 @@ FROM customers;`,
       "Phone number with only special characters \u2014 becomes empty string",
       "Address is empty string vs NULL \u2014 COALESCE only catches NULL",
       "Customer name with internal multiple spaces"
-    ]
+    ],
+    expectedOutput: `+-------------+---------------+-----------------+------------+-------------+
+| customer_id | customer_name | email           | phone      | address     |
++-------------+---------------+-----------------+------------+-------------+
+| 1           | John Smith    | john@email.com  | 1234567890 | 123 Main St |
+| 2           | Jane Doe      | jane@email.com  | 9876543210 | Unknown     |
+| 4           | Alice Brown   | alice@email.com | 1112223333 | 789 Pine Rd |
++-------------+---------------+-----------------+------------+-------------+`
   },
 
   {
@@ -2436,7 +2548,15 @@ FROM employees;`,
       "NULL salary values \u2014 should be filtered out",
       "Department with exactly two distinct salary levels",
       "Negative salary difference (impossible with DESC ranking)"
-    ]
+    ],
+    expectedOutput: `+-------------+------------------+
+| department  | salarydifference |
++-------------+------------------+
+| Engineering | 5000             |
+| HR          | 3000             |
+| Marketing   | NULL             |
+| Sales       | NULL             |
++-------------+------------------+`
   },
 
   {
@@ -2576,7 +2696,18 @@ FROM users;`,
       "All users in same risk category",
       "Single user in the system \u2014 total collection is just their premium",
       "Rounding precision with multiplication of decimals"
-    ]
+    ],
+    expectedOutput: `+---------+----------------+--------+----------------+
+| user_id | insurance_type | risk   | insured_amount |
++---------+----------------+--------+----------------+
+| U001    | Term Life      | Low    | 2520           |
+| U002    | Health         | Medium | 378            |
+| U003    | Endowment      | High   | 2520           |
+| U004    | Whole Life     | Low    | 2520           |
+| U005    | Health         | Low    | 504            |
+| U006    | Endowment      | Medium | 3024           |
+| U007    | Term Life      | High   | 1764           |
++---------+----------------+--------+----------------+`
   },
 
   {
@@ -2759,7 +2890,14 @@ FROM customers;`,
       "Credit limit of 0 \u2014 division by zero in utilization calculation",
       "Bill paid on exact due date \u2014 counts as on-time (<=)",
       "Customer with only loans and no credit card bills"
-    ]
+    ],
+    expectedOutput: `+-------------+-------------+
+| customer_id | cibil_score |
++-------------+-------------+
+| 1           | 67.7        |
+| 2           | 30.0        |
+| 3           | 85.0        |
++-------------+-------------+`
   },
 
   {
@@ -2842,7 +2980,15 @@ FROM customer_orders;`,
       "No orders on a specific date \u2014 date won't appear in results",
       "Same customer ordering multiple times on the same day after first day",
       "NULL order_date values"
-    ]
+    ],
+    expectedOutput: `+-----------------------------------------------------------+---------------+------------------+
+| order_date                                                | new_customers | repeat_customers |
++-----------------------------------------------------------+---------------+------------------+
+| Sun Dec 31 2023 16:00:00 GMT-0800 (Pacific Standard Time) | 2             | 0                |
+| Mon Jan 01 2024 16:00:00 GMT-0800 (Pacific Standard Time) | 1             | 1                |
+| Tue Jan 02 2024 16:00:00 GMT-0800 (Pacific Standard Time) | 1             | 2                |
+| Wed Jan 03 2024 16:00:00 GMT-0800 (Pacific Standard Time) | 1             | 0                |
++-----------------------------------------------------------+---------------+------------------+`
   },
 
   {
@@ -2955,7 +3101,13 @@ FROM employees;`,
       "NULL login or logout values",
       "Employee with exactly 3 days of 8+ hours but also 2 of those are 10+ \u2014 should be 'both'",
       "Employee with multiple login/logout pairs on the same day"
-    ]
+    ],
+    expectedOutput: `+--------+-----------+
+| emp_id | criterion |
++--------+-----------+
+| 1      | both      |
+| 2      | 2         |
++--------+-----------+`
   },
 
   {
@@ -3061,7 +3213,13 @@ FROM lifts;`,
       "Lift with exact capacity match \u2014 <= includes boundary",
       "Empty lift (no passengers assigned)",
       "Multiple passengers with identical weight and gender"
-    ]
+    ],
+    expectedOutput: `+------+---------------------+
+| id   | passenger_list      |
++------+---------------------+
+| 1    | Alice,Carol,Bob     |
+| 2    | Ivy,Eve,Grace,Henry |
++------+---------------------+`
   },
 
   {
@@ -3143,7 +3301,13 @@ FROM orders;`,
       "First two months of data \u2014 excluded from results",
       "Multiple products trending in the same month",
       "Product with sales in non-consecutive months"
-    ]
+    ],
+    expectedOutput: `+-------------+------------+
+| order_month | product_id |
++-------------+------------+
+| 202303      | P001       |
+| 202304      | P002       |
++-------------+------------+`
   },
 
   {
@@ -3223,7 +3387,13 @@ FROM drivers;`,
       "Three consecutive profit rides \u2014 each pair counts separately",
       "NULL start or end locations",
       "Rides spanning midnight (time wraps around)"
-    ]
+    ],
+    expectedOutput: `+------+-------------+--------------+
+| id   | total_rides | profit_rides |
++------+-------------+--------------+
+| D1   | 4           | 2            |
+| D2   | 3           | 1            |
++------+-------------+--------------+`
   },
 
   {
@@ -3291,7 +3461,16 @@ FROM orders;`,
       "Product pair purchased only once \u2014 low confidence recommendation",
       "Very popular product appearing in most orders \u2014 high pair frequency but may not be meaningful",
       "No overlapping products between orders"
-    ]
+    ],
+    expectedOutput: `+-----------+-----------+--------------------+
+| product_1 | product_2 | purchase_frequency |
++-----------+-----------+--------------------+
+| 102       | 101       | 2                  |
+| 103       | 101       | 2                  |
+| 103       | 102       | 2                  |
+| 104       | 102       | 2                  |
+| 104       | 103       | 1                  |
++-----------+-----------+--------------------+`
   },
 
   {
@@ -3395,7 +3574,13 @@ FROM orders;`,
       "Month with all orders cancelled \u2014 denominator for cancellation rate is 0",
       "No cancellations or returns in a month \u2014 both rates are 0",
       "Order cancelled and delivered on same date"
-    ]
+    ],
+    expectedOutput: `+------------+-------------+-------------------+-------------+
+| order_year | order_month | cancellation_rate | return_rate |
++------------+-------------+-------------------+-------------+
+| 2024       | 1           | 33.33             | 33.33       |
+| 2024       | 2           | 33.33             | 33.33       |
++------------+-------------+-------------------+-------------+`
   },
 
   {
@@ -3491,7 +3676,17 @@ FROM icc_world_cup;`,
       "Winner value doesn't match either team (invalid data)",
       "Team with zero wins and zero draws \u2014 all losses",
       "Single match in tournament"
-    ]
+    ],
+    expectedOutput: `+-----------+--------------+------------+--------------+--------------+
+| team_name | match_played | no_of_wins | no_of_losses | total_points |
++-----------+--------------+------------+--------------+--------------+
+| Aus       | 2            | 1          | 1            | 2            |
+| Eng       | 3            | 1          | 2            | 2            |
+| India     | 3            | 2          | 0            | 5            |
+| NZ        | 1            | 1          | 0            | 2            |
+| SA        | 2            | 0          | 1            | 1            |
+| SL        | 3            | 1          | 2            | 2            |
++-----------+--------------+------------+--------------+--------------+`
   },
 
   {
@@ -3591,7 +3786,14 @@ FROM employee_record;`,
       "Employee entirely outside the window \u2014 in_time > out_time, returns 0",
       "Employee works across midnight within the window",
       "Multiple in/out cycles within the window for same employee"
-    ]
+    ],
+    expectedOutput: `+--------+--------------------+
+| emp_id | time_spent_in_mins |
++--------+--------------------+
+| 1      | 900.0              |
+| 2      | 660.0              |
+| 3      | 60.0               |
++--------+--------------------+`
   },
 
   {
@@ -3701,7 +3903,14 @@ FROM post_likes;`,
       "Multiple posts with same like count \u2014 secondary sort by post_id breaks tie",
       "User follows someone who hasn't liked any posts",
       "Circular follows (A follows B, B follows A)"
-    ]
+    ],
+    expectedOutput: `+---------+---------+-------------+
+| user_id | post_id | no_of_likes |
++---------+---------+-------------+
+| 201     | 1       | 2           |
+| 202     | 2       | 2           |
+| 203     | 4       | 1           |
++---------+---------+-------------+`
   },
 
   {
@@ -3799,7 +4008,14 @@ FROM dashboard_visit;`,
       "Multiple visits on different days within 60 minutes of midnight",
       "NULL visit_time values",
       "Visits spanning midnight \u2014 gap calculation still works on timestamps"
-    ]
+    ],
+    expectedOutput: `+---------+--------------+------------+
+| user_id | no_of_visits | visit_days |
++---------+--------------+------------+
+| U1      | 3            | 2          |
+| U2      | 2            | 1          |
+| U3      | 1            | 1          |
++---------+--------------+------------+`
   },
 
   {
@@ -3887,7 +4103,12 @@ FROM Transactions;`,
       "Month with 1 large payment > $100 \u2014 fee NOT waived (need >= 2 payments)",
       "All 12 months have qualifying transactions \u2014 no additional fees",
       "Transaction amount of exactly 0"
-    ]
+    ],
+    expectedOutput: `+---------------+
+| final_balance |
++---------------+
+| 1510          |
++---------------+`
   },
 
   {
@@ -3991,7 +4212,14 @@ FROM users;`,
       "User with no events at all \u2014 all fields NULL",
       "Case sensitivity: 'prime' vs 'Prime' \u2014 check data consistency",
       "User with multiple Prime events (re-subscription)"
-    ]
+    ],
+    expectedOutput: `+-----------+-----------------------------------------------------------+---------------------+-----------------------------------------------------------+
+| user_name | prime_member_date                                         | last_access_service | last_access_service_date                                  |
++-----------+-----------------------------------------------------------+---------------------+-----------------------------------------------------------+
+| Alice     | Tue Jan 09 2024 16:00:00 GMT-0800 (Pacific Standard Time) | Music               | Thu Jan 04 2024 16:00:00 GMT-0800 (Pacific Standard Time) |
+| Carol     | Thu Jan 11 2024 16:00:00 GMT-0800 (Pacific Standard Time) | Music               | Sat Jan 06 2024 16:00:00 GMT-0800 (Pacific Standard Time) |
+| Bob       | NULL                                                      | Music               | Sun Jan 14 2024 16:00:00 GMT-0800 (Pacific Standard Time) |
++-----------+-----------------------------------------------------------+---------------------+-----------------------------------------------------------+`
   },
 
   {
@@ -4079,7 +4307,16 @@ FROM employee;`,
       "Name with all three parts",
       "NULL or empty fullname values",
       "Names with multiple spaces or special characters"
-    ]
+    ],
+    expectedOutput: `+---------------------+------------+-------------+-----------+
+| fullname            | first_name | middle_name | last_name |
++---------------------+------------+-------------+-----------+
+| Smith,John Michael  | John       | Michael     | Smith     |
+| Doe,Jane            | Jane       | NULL        | Doe       |
+| Alice               | Alice      | NULL        | NULL      |
+| Johnson,Bob William | Bob        | William     | Johnson   |
+| Brown,Mary          | Mary       | NULL        | Brown     |
++---------------------+------------+-------------+-----------+`
   },
 
   {
@@ -4178,7 +4415,15 @@ FROM orders;`,
       "Delivery spanning multiple days \u2014 needs additional UNION ALL logic",
       "Very short delivery (< 1 minute)",
       "NULL pickup_time or delivery_time"
-    ]
+    ],
+    expectedOutput: `+----------+-----------------------------------------------------------+----------------------+
+| rider_id | ride_date                                                 | ride_time_mins       |
++----------+-----------------------------------------------------------+----------------------+
+| 1        | Sun Dec 31 2023 16:00:00 GMT-0800 (Pacific Standard Time) | 195.0000000000000000 |
+| 1        | Mon Jan 01 2024 16:00:00 GMT-0800 (Pacific Standard Time) | 30.0000000000000000  |
+| 2        | Sun Dec 31 2023 16:00:00 GMT-0800 (Pacific Standard Time) | 130.0000000000000000 |
+| 2        | Mon Jan 01 2024 16:00:00 GMT-0800 (Pacific Standard Time) | 60.0000000000000000  |
++----------+-----------------------------------------------------------+----------------------+`
   },
 
   {
@@ -4303,7 +4548,14 @@ FROM notifications;`,
       "Purchase at exact boundary time \u2014 included or excluded?",
       "No purchases within any notification window \u2014 empty result",
       "Purchase of different product within window"
-    ]
+    ],
+    expectedOutput: `+-----------------+------------------------+-----------------------------+
+| notification_id | same_product_purchases | different_product_purchases |
++-----------------+------------------------+-----------------------------+
+| 1               | 2                      | 1                           |
+| 2               | 1                      | 0                           |
+| 3               | 1                      | 0                           |
++-----------------+------------------------+-----------------------------+`
   },
 
   {
@@ -4421,7 +4673,25 @@ FROM orders;`,
       "Second day \u2014 rolling sum is sum of first two days",
       "Product appearing only once in the entire month",
       "Calendar table missing dates \u2014 gaps in rolling calculation"
-    ]
+    ],
+    expectedOutput: `+------------+-----------------------------------------------------------+-------+--------------+
+| product_id | order_date                                                | sales | rolling3_sum |
++------------+-----------------------------------------------------------+-------+--------------+
+| P001       | Sun Dec 31 2023 16:00:00 GMT-0800 (Pacific Standard Time) | 100   | 100          |
+| P001       | Mon Jan 01 2024 16:00:00 GMT-0800 (Pacific Standard Time) | 0     | 100          |
+| P001       | Tue Jan 02 2024 16:00:00 GMT-0800 (Pacific Standard Time) | 150   | 250          |
+| P001       | Wed Jan 03 2024 16:00:00 GMT-0800 (Pacific Standard Time) | 0     | 150          |
+| P001       | Thu Jan 04 2024 16:00:00 GMT-0800 (Pacific Standard Time) | 80    | 230          |
+| P001       | Fri Jan 05 2024 16:00:00 GMT-0800 (Pacific Standard Time) | 0     | 80           |
+| P001       | Sat Jan 06 2024 16:00:00 GMT-0800 (Pacific Standard Time) | 0     | 80           |
+| P002       | Sun Dec 31 2023 16:00:00 GMT-0800 (Pacific Standard Time) | 200   | 200          |
+| P002       | Mon Jan 01 2024 16:00:00 GMT-0800 (Pacific Standard Time) | 0     | 200          |
+| P002       | Tue Jan 02 2024 16:00:00 GMT-0800 (Pacific Standard Time) | 0     | 200          |
+| P002       | Wed Jan 03 2024 16:00:00 GMT-0800 (Pacific Standard Time) | 120   | 120          |
+| P002       | Thu Jan 04 2024 16:00:00 GMT-0800 (Pacific Standard Time) | 0     | 120          |
+| P002       | Fri Jan 05 2024 16:00:00 GMT-0800 (Pacific Standard Time) | 0     | 120          |
+| P002       | Sat Jan 06 2024 16:00:00 GMT-0800 (Pacific Standard Time) | 0     | 0            |
++------------+-----------------------------------------------------------+-------+--------------+`
   },
 
   {
@@ -4514,7 +4784,13 @@ FROM revenue;`,
       "Company with missing year data \u2014 artificial growth spike",
       "Revenue of 0 in any year \u2014 division by zero if using percentage calculation",
       "Tie at exactly 25% growth \u2014 included (>= threshold)"
-    ]
+    ],
+    expectedOutput: `+------------+---------------+
+| company_id | total_revenue |
++------------+---------------+
+| 1          | 620000.00     |
+| 3          | 335000.00     |
++------------+---------------+`
   },
 
   {
@@ -4614,7 +4890,13 @@ FROM conversation;`,
       "Same timestamp for agent and customer \u2014 first_message_by ambiguous",
       "NULL agentId values \u2014 excluded from COUNT(DISTINCT)",
       "Order never resolved \u2014 resolved = 0"
-    ]
+    ],
+    expectedOutput: `+----------+-----------+-----------------------------------------------------------+-----------------------------------------------------------+--------------------+-----------------------+------------------+----------+------------+
+| order_id | city_code | first_agent_message                                       | first_customer_message                                    | num_messages_agent | num_messages_customer | first_message_by | resolved | reassigned |
++----------+-----------+-----------------------------------------------------------+-----------------------------------------------------------+--------------------+-----------------------+------------------+----------+------------+
+| ORD001   | NYC       | Mon Jan 01 2024 10:00:00 GMT-0800 (Pacific Standard Time) | Mon Jan 01 2024 10:05:00 GMT-0800 (Pacific Standard Time) | 2                  | 1                     | Agent            | 1        | 0          |
+| ORD002   | LAX       | Mon Jan 01 2024 11:05:00 GMT-0800 (Pacific Standard Time) | Mon Jan 01 2024 11:00:00 GMT-0800 (Pacific Standard Time) | 2                  | 1                     | Customer         | 0        | 1          |
++----------+-----------+-----------------------------------------------------------+-----------------------------------------------------------+--------------------+-----------------------+------------------+----------+------------+`
   },
 
   {
@@ -4723,7 +5005,14 @@ FROM competition;`,
       "NULL slice_count or bet values \u2014 excluded from winner/loser calculation",
       "Multiple tied winners \u2014 loser pot split equally",
       "Group with all same slice_count \u2014 everyone is rank 1"
-    ]
+    ],
+    expectedOutput: `+----------+------------------+--------------+
+| group_id | participant_name | total_payout |
++----------+------------------+--------------+
+| 1        | Alice            | 71.00        |
+| 2        | Dave             | 65.25        |
+| 2        | Eve              | 50.25        |
++----------+------------------+--------------+`
   },
 
   {
@@ -4862,7 +5151,14 @@ FROM products;`,
       "Sale date falling outside all season ranges \u2014 not counted",
       "Region with only one product \u2014 automatically top seller",
       "Seasons with overlapping date ranges"
-    ]
+    ],
+    expectedOutput: `+-------------+--------------+-------------+---------------------+
+| region_name | product_name | season_name | total_quantity_sold |
++-------------+--------------+-------------+---------------------+
+| East        | Widget       | Spring      | 50                  |
+| East        | Widget       | Summer      | 80                  |
+| West        | Widget       | Summer      | 60                  |
++-------------+--------------+-------------+---------------------+`
   },
 
   {
@@ -4930,7 +5226,16 @@ FROM logs;`,
       "Duplicate log_ids \u2014 may break the technique",
       "Very large gaps between ranges",
       "Empty table \u2014 no results"
-    ]
+    ],
+    expectedOutput: `+----------+--------+
+| start_id | end_id |
++----------+--------+
+| 1        | 3      |
+| 5        | 6      |
+| 8        | 8      |
+| 10       | 13     |
+| 20       | 20     |
++----------+--------+`
   },
 
   {
@@ -5020,7 +5325,16 @@ FROM hierarchy;`,
       "Diamond hierarchy (employee reports to two managers) \u2014 DISTINCT prevents double-count",
       "Circular reporting chain \u2014 infinite recursion risk",
       "Very deep hierarchy \u2014 PostgreSQL recursion limit"
-    ]
+    ],
+    expectedOutput: `+------+------------------+
+| m_id | num_of_reportees |
++------+------------------+
+| 1    | 7                |
+| 2    | 4                |
+| 3    | 1                |
+| 4    | 1                |
+| 5    | 1                |
++------+------------------+`
   },
 
   {
@@ -5114,7 +5428,14 @@ FROM events;`,
       "Events at the exact same timestamp",
       "Very long gaps between sessions",
       "NULL event_time values"
-    ]
+    ],
+    expectedOutput: `+--------+------------+-----------------------------------------------------------+-----------------------------------------------------------+---------------------+-------------+
+| userid | session_id | session_start_time                                        | session_end_time                                          | session_duration    | event_count |
++--------+------------+-----------------------------------------------------------+-----------------------------------------------------------+---------------------+-------------+
+| 1      | 1          | Mon Jan 01 2024 10:00:00 GMT-0800 (Pacific Standard Time) | Mon Jan 01 2024 10:25:00 GMT-0800 (Pacific Standard Time) | 25.0000000000000000 | 3           |
+| 1      | 2          | Mon Jan 01 2024 11:30:00 GMT-0800 (Pacific Standard Time) | Mon Jan 01 2024 11:45:00 GMT-0800 (Pacific Standard Time) | 15.0000000000000000 | 2           |
+| 2      | 1          | Mon Jan 01 2024 09:00:00 GMT-0800 (Pacific Standard Time) | Mon Jan 01 2024 09:10:00 GMT-0800 (Pacific Standard Time) | 10.0000000000000000 | 2           |
++--------+------------+-----------------------------------------------------------+-----------------------------------------------------------+---------------------+-------------+`
   },
 
   {
@@ -5189,7 +5510,14 @@ FROM assessments;`,
       "Experience level with no perfect scores",
       "Single candidate per experience level",
       "All candidates have perfect scores"
-    ]
+    ],
+    expectedOutput: `+------------+------------------+--------------------------+
+| experience | total_candidates | perfect_score_candidates |
++------------+------------------+--------------------------+
+| 2          | 2                | 2                        |
+| 3          | 2                | 1                        |
+| 5          | 2                | 1                        |
++------------+------------------+--------------------------+`
   },
 
   {
@@ -5315,7 +5643,13 @@ FROM employees;`,
       "Budget exactly equal to cost \u2014 'within budget'",
       "Employee on multiple projects \u2014 salary counted per project",
       "Project spanning exactly one year \u2014 full annual salary"
-    ]
+    ],
+    expectedOutput: `+-------+--------+---------------+
+| title | budget | label         |
++-------+--------+---------------+
+| Alpha | 50000  | overbudget    |
+| Beta  | 200000 | within budget |
++-------+--------+---------------+`
   },
 
   {
@@ -5383,7 +5717,13 @@ FROM orders;`,
       "Customer bought only Laptop and Mouse \u2014 total_distinct_products = 2",
       "No customers match criteria \u2014 empty result",
       "NULL product_name \u2014 not matched by any filter"
-    ]
+    ],
+    expectedOutput: `+-------------+-------------------------+
+| customer_id | total_distinct_products |
++-------------+-------------------------+
+| 1           | 3                       |
+| 3           | 2                       |
++-------------+-------------------------+`
   },
 
   {
@@ -5466,7 +5806,13 @@ FROM train_schedule;`,
       "Single train at a station \u2014 always 1 platform",
       "All trains overlapping \u2014 platforms = number of trains",
       "Station with no trains \u2014 0 platforms"
-    ]
+    ],
+    expectedOutput: `+------------+------------------------+
+| station_id | min_platforms_required |
++------------+------------------------+
+| 1          | 2                      |
+| 2          | 2                      |
++------------+------------------------+`
   },
 
   {
@@ -5497,7 +5843,12 @@ SELECT 1;`,
       "Current day is Saturday \u2014 should return 6 days ago",
       "Leap year boundary dates",
       "Year boundary (e.g., Jan 1 is Monday)"
-    ]
+    ],
+    expectedOutput: `+-----------------------------------------------------------+
+| last_sunday                                               |
++-----------------------------------------------------------+
+| Sat Feb 14 2026 16:00:00 GMT-0800 (Pacific Standard Time) |
++-----------------------------------------------------------+`
   },
 
   {
@@ -5655,7 +6006,13 @@ FROM companies;`,
       "Average rating below 1.0 for non-promoted \u2014 excluded",
       "Rating of exactly 1.0 \u2014 included (>= threshold)",
       "Company with 0.0 average rating \u2014 excluded"
-    ]
+    ],
+    expectedOutput: `+-----------+----------+--------------------------------+
+| name      | phone    | rating                         |
++-----------+----------+--------------------------------+
+| DataInc   | 555-0202 | **** (4.2, based on 2 reviews) |
+| WebStudio | 555-0303 | * (1.8, based on 2 reviews)    |
++-----------+----------+--------------------------------+`
   },
 
   {
@@ -5767,7 +6124,13 @@ FROM sales;`,
       "No sales in either quarter \u2014 not in result",
       "Sale on quarter boundary date \u2014 correct assignment",
       "Current date is first day of quarter \u2014 qtd may be very small"
-    ]
+    ],
+    expectedOutput: `+------------+--------------------+-----------+
+| product_id | last_quarter_sales | qtd_sales |
++------------+--------------------+-----------+
+| 1          | 0                  | 0         |
+| 2          | 0                  | 0         |
++------------+--------------------+-----------+`
   },
 
   {
@@ -5902,7 +6265,15 @@ FROM teams;`,
       "0-0 draw vs other draws \u2014 same points",
       "Team playing against itself \u2014 invalid data",
       "Multiple matches between same teams"
-    ]
+    ],
+    expectedOutput: `+---------+-----------+------------+
+| team_id | team_name | num_points |
++---------+-----------+------------+
+| 3       | France    | 4          |
+| 1       | Brazil    | 3          |
+| 2       | Germany   | 3          |
+| 4       | Argentina | 1          |
++---------+-----------+------------+`
   },
 
   {
@@ -6004,7 +6375,14 @@ FROM employees;`,
       "Multiple promotions compound \u2014 not additive",
       "100% increase \u2014 salary doubles",
       "0% increase promotion \u2014 no change"
-    ]
+    ],
+    expectedOutput: `+------+-------+----------------+----------------+
+| id   | name  | initial_salary | current_salary |
++------+-------+----------------+----------------+
+| 1    | Ankit | 50000          | 63250.0        |
+| 2    | Rohit | 60000          | 72000.0        |
+| 3    | Priya | 45000          | 45000.0        |
++------+-------+----------------+----------------+`
   },
 
   {
@@ -6212,7 +6590,14 @@ FROM employees;`,
       "prev_salary is NULL for first record \u2014 max_perc_change ignores it",
       "Same salary multiple times \u2014 0% change",
       "Tied salary growth \u2014 broken by earliest join_date"
-    ]
+    ],
+    expectedOutput: `+-------------+---------------+------------------+-----------------+-----------------+--------------+
+| employee_id | latest_salary | total_promotions | max_perc_change | never_decreased | rankbygrowth |
++-------------+---------------+------------------+-----------------+-----------------+--------------+
+| 1           | 58000         | 2                | 12.73           | N               | 2            |
+| 2           | 55000         | 2                | 14.58           | Y               | 1            |
+| 3           | 60000         | 0                | 0.00            | Y               | 3            |
++-------------+---------------+------------------+-----------------+-----------------+--------------+`
   },
 
   {
@@ -6316,7 +6701,13 @@ FROM orders;`,
       "User with fewer than 3 orders \u2014 excluded",
       "Orders on the same day \u2014 difference = 0 days",
       "Exact boundary: 2nd order 7 days after 1st \u2014 <= 7 includes it"
-    ]
+    ],
+    expectedOutput: `+---------+-----------------------------------------------------------+-----------------------------------------------------------+-----------------------------------------------------------+
+| user_id | first_order_date                                          | second_order_date                                         | third_order_date                                          |
++---------+-----------------------------------------------------------+-----------------------------------------------------------+-----------------------------------------------------------+
+| 101     | Sun Dec 31 2023 16:00:00 GMT-0800 (Pacific Standard Time) | Thu Jan 04 2024 16:00:00 GMT-0800 (Pacific Standard Time) | Fri Feb 09 2024 16:00:00 GMT-0800 (Pacific Standard Time) |
+| 103     | Sun Dec 31 2023 16:00:00 GMT-0800 (Pacific Standard Time) | Tue Jan 02 2024 16:00:00 GMT-0800 (Pacific Standard Time) | Wed Feb 14 2024 16:00:00 GMT-0800 (Pacific Standard Time) |
++---------+-----------------------------------------------------------+-----------------------------------------------------------+-----------------------------------------------------------+`
   },
 
   {
@@ -6421,7 +6812,20 @@ FROM logins;`,
       "Part = '0' \u2014 valid (no leading zero issue)",
       "Part > 255 \u2014 invalid",
       "Non-numeric characters in any part \u2014 invalid"
-    ]
+    ],
+    expectedOutput: `+-----------------+----------+
+| ip_address      | is_valid |
++-----------------+----------+
+| 192.168.1.1     | 1        |
+| 255.255.255.255 | 1        |
+| 0.0.0.0         | 1        |
+| 256.1.2.3       | 0        |
+| 1.02.3.4        | 0        |
+| 1.2.3           | 0        |
+| abc.def.ghi.jkl | 0        |
+| 1.2.3.4.5       | 0        |
+| 192.168.001.1   | 0        |
++-----------------+----------+`
   },
 
   {
@@ -6517,7 +6921,14 @@ FROM emp_details;`,
       "City with 4 people \u2014 team of 3 + team of 1",
       "Empty city \u2014 no teams generated",
       "Duplicate employee names in same city"
-    ]
+    ],
+    expectedOutput: `+--------+-------------------+-----------+
+| city   | team              | team_name |
++--------+-------------------+-----------+
+| Delhi  | Alice,Bob,Charlie | Team1     |
+| Delhi  | Dave              | Team2     |
+| Mumbai | Eve,Frank,Grace   | Team3     |
++--------+-------------------+-----------+`
   },
 
   {
@@ -6650,7 +7061,13 @@ FROM transactions;`,
       "CANCELED BUY \u2014 deducts 1% of amount from total",
       "Customer with only PENDING transactions \u2014 total = 0",
       "Transaction on July 31 23:59:59 \u2014 included"
-    ]
+    ],
+    expectedOutput: `+----------+------+------+-----------+---------+----------+-------+
+| customer | buy  | sell | completed | pending | canceled | total |
++----------+------+------+-----------+---------+----------+-------+
+| Bob      | 2    | 1    | 1         | 1       | 1        | 99.60 |
+| Alice    | 2    | 1    | 2         | 0       | 1        | 52.80 |
++----------+------+------+-----------+---------+----------+-------+`
   },
 
   {
@@ -6784,7 +7201,13 @@ FROM users;`,
       "Usage exactly on the boundary date \u2014 included in which month?",
       "Registration cohort with single user",
       "User with exactly 30 minutes \u2014 meets threshold (>=)"
-    ]
+    ],
+    expectedOutput: `+--------------------+-------------+--------------+--------------+--------------+
+| registration_month | total_users | m1_retention | m2_retention | m3_retention |
++--------------------+-------------+--------------+--------------+--------------+
+| 2024-01            | 2           | 100.00       | 50.00        | 50.00        |
+| 2024-02            | 1           | 100.00       | 0.00         | 0.00         |
++--------------------+-------------+--------------+--------------+--------------+`
   },
 
   {
@@ -7126,7 +7549,17 @@ ORDER BY order_id;`,
       "Exact match: running total equals available quantity exactly",
       "Single order exceeds total inventory - partial fulfillment",
       "Product with no orders should not appear in results"
-    ]
+    ],
+    expectedOutput: `+----------+--------------+--------------------+---------------+---------------+
+| order_id | product_name | quantity_requested | qty_fulfilled | comments      |
++----------+--------------+--------------------+---------------+---------------+
+| 101      | Laptop       | 3                  | 3             | Full Order    |
+| 102      | Laptop       | 5                  | 5             | Full Order    |
+| 103      | Laptop       | 4                  | 2             | Partial Order |
+| 104      | Phone        | 3                  | 3             | Full Order    |
+| 105      | Phone        | 3                  | 2             | Partial Order |
+| 106      | Tablet       | 10                 | 8             | Partial Order |
++----------+--------------+--------------------+---------------+---------------+`
   },
   {
     id: 69,
@@ -7233,7 +7666,17 @@ ORDER BY current_year, current_month;`,
       "Customer's first month - 100% are 'new', not retained",
       "Year boundary crossing (Dec to Jan) - year comparison logic",
       "Single customer in a month - retention to self in future months"
-    ]
+    ],
+    expectedOutput: `+--------------+---------------+-------------+--------------+-----------------+--------------------+
+| current_year | current_month | future_year | future_month | total_customers | retained_customers |
++--------------+---------------+-------------+--------------+-----------------+--------------------+
+| 2024         | 1             | 2024        | 2            | 3               | 2                  |
+| 2024         | 1             | 2024        | 3            | 3               | 2                  |
+| 2024         | 1             | 2024        | 4            | 3               | 2                  |
+| 2024         | 2             | 2024        | 3            | 3               | 1                  |
+| 2024         | 2             | 2024        | 4            | 3               | 2                  |
+| 2024         | 3             | 2024        | 4            | 3               | 1                  |
++--------------+---------------+-------------+--------------+-----------------+--------------------+`
   },
   {
     id: 70,
@@ -7350,7 +7793,13 @@ ORDER BY down_minutes DESC;`,
       "Multiple downtime periods for same service - each counted separately",
       "Missing minute readings (gaps in data) - handle as separate incidents",
       "Service never goes back 'up' - open-ended downtime period"
-    ]
+    ],
+    expectedOutput: `+--------------+-----------------------------------------------------------+-----------------------------------------------------------+--------------+
+| service_name | down_start_time                                           | down_end_time                                             | down_minutes |
++--------------+-----------------------------------------------------------+-----------------------------------------------------------+--------------+
+| Cache        | Mon Jan 01 2024 10:00:00 GMT-0800 (Pacific Standard Time) | Mon Jan 01 2024 10:07:00 GMT-0800 (Pacific Standard Time) | 8            |
+| API          | Mon Jan 01 2024 10:02:00 GMT-0800 (Pacific Standard Time) | Mon Jan 01 2024 10:06:00 GMT-0800 (Pacific Standard Time) | 5            |
++--------------+-----------------------------------------------------------+-----------------------------------------------------------+--------------+`
   },
   {
     id: 71,
@@ -7515,7 +7964,17 @@ ORDER BY request_id;`,
       "Leave spanning month boundary - which month's accrual to use",
       "Rejected leave followed by approved leave - balance not deducted for rejected",
       "Fractional leave balance (1.5 * months creates decimals)"
-    ]
+    ],
+    expectedOutput: `+------------+-------------+-----------------------------------------------------------+-----------------------------------------------------------+----------+
+| request_id | employee_id | leave_start_date                                          | leave_end_date                                            | status   |
++------------+-------------+-----------------------------------------------------------+-----------------------------------------------------------+----------+
+| 1          | 1           | Sun Jan 14 2024 16:00:00 GMT-0800 (Pacific Standard Time) | Tue Jan 16 2024 16:00:00 GMT-0800 (Pacific Standard Time) | Approved |
+| 2          | 1           | Fri Feb 09 2024 16:00:00 GMT-0800 (Pacific Standard Time) | Sun Feb 11 2024 16:00:00 GMT-0800 (Pacific Standard Time) | Rejected |
+| 3          | 1           | Mon Mar 04 2024 16:00:00 GMT-0800 (Pacific Standard Time) | Sat Mar 09 2024 16:00:00 GMT-0800 (Pacific Standard Time) | Rejected |
+| 4          | 2           | Fri Jan 19 2024 16:00:00 GMT-0800 (Pacific Standard Time) | Sun Jan 21 2024 16:00:00 GMT-0800 (Pacific Standard Time) | Rejected |
+| 5          | 2           | Wed Feb 14 2024 16:00:00 GMT-0800 (Pacific Standard Time) | Thu Feb 15 2024 16:00:00 GMT-0800 (Pacific Standard Time) | Approved |
+| 6          | 3           | Tue Jan 09 2024 16:00:00 GMT-0800 (Pacific Standard Time) | Thu Jan 11 2024 16:00:00 GMT-0800 (Pacific Standard Time) | Approved |
++------------+-------------+-----------------------------------------------------------+-----------------------------------------------------------+----------+`
   },
   {
     id: 72,
@@ -7648,7 +8107,13 @@ ORDER BY max_streak DESC, driver_id DESC;`,
       "All ratings positive (one long streak) - streak = total trips - 1",
       "Alternating 4,3,4,3 - max streak = 0 (no consecutives)",
       "Same trip_time for different trips - need tiebreaker (trip_id)"
-    ]
+    ],
+    expectedOutput: `+-----------+------------+
+| driver_id | max_streak |
++-----------+------------+
+| D2        | 4          |
+| D1        | 2          |
++-----------+------------+`
   },
   {
     id: 73,
@@ -7766,7 +8231,20 @@ ORDER BY id;`,
       "Sequence of 5kg items - each in separate box",
       "Empty table - no results",
       "Single item - box_number = 1 regardless of weight"
-    ]
+    ],
+    expectedOutput: `+------+--------+------------+
+| id   | weight | box_number |
++------+--------+------------+
+| 1    | 1      | 1          |
+| 2    | 3      | 1          |
+| 3    | 5      | 2          |
+| 4    | 3      | 3          |
+| 5    | 2      | 3          |
+| 6    | 2      | 4          |
+| 7    | 2      | 4          |
+| 8    | 4      | 5          |
+| 9    | 1      | 5          |
++------+--------+------------+`
   },
   {
     id: 74,
@@ -7918,7 +8396,23 @@ ORDER BY month_end_date;`,
       "Driver with no rides ever - only join_date counts for activity",
       "Exactly 28 days since last activity - still active (<=28)",
       "Driver joins in future year - not in 2023 results"
-    ]
+    ],
+    expectedOutput: `+-----------------------------------------------------------+----------------------+
+| month_end_date                                            | no_of_active_drivers |
++-----------------------------------------------------------+----------------------+
+| Mon Jan 30 2023 16:00:00 GMT-0800 (Pacific Standard Time) | 2                    |
+| Mon Feb 27 2023 16:00:00 GMT-0800 (Pacific Standard Time) | 2                    |
+| Thu Mar 30 2023 17:00:00 GMT-0700 (Pacific Daylight Time) | 2                    |
+| Sat Apr 29 2023 17:00:00 GMT-0700 (Pacific Daylight Time) | 0                    |
+| Tue May 30 2023 17:00:00 GMT-0700 (Pacific Daylight Time) | 0                    |
+| Thu Jun 29 2023 17:00:00 GMT-0700 (Pacific Daylight Time) | 0                    |
+| Sun Jul 30 2023 17:00:00 GMT-0700 (Pacific Daylight Time) | 0                    |
+| Wed Aug 30 2023 17:00:00 GMT-0700 (Pacific Daylight Time) | 0                    |
+| Fri Sep 29 2023 17:00:00 GMT-0700 (Pacific Daylight Time) | 0                    |
+| Mon Oct 30 2023 17:00:00 GMT-0700 (Pacific Daylight Time) | 0                    |
+| Wed Nov 29 2023 16:00:00 GMT-0800 (Pacific Standard Time) | 0                    |
+| Sat Dec 30 2023 16:00:00 GMT-0800 (Pacific Standard Time) | 0                    |
++-----------------------------------------------------------+----------------------+`
   },
   {
     id: 75,
@@ -8075,7 +8569,20 @@ ORDER BY master_id, marketplace_id, oos_date;`,
       "Exactly 7 days apart - should be included (>= 7 days)",
       "Large gap (e.g., 100 days) between events - both are key events",
       "Same product, different marketplaces - tracked independently"
-    ]
+    ],
+    expectedOutput: `+-----------+----------------+-----------------------------------------------------------+
+| master_id | marketplace_id | oos_date                                                  |
++-----------+----------------+-----------------------------------------------------------+
+| PROD1     | 1              | Sun Dec 31 2023 16:00:00 GMT-0800 (Pacific Standard Time) |
+| PROD1     | 1              | Sun Jan 07 2024 16:00:00 GMT-0800 (Pacific Standard Time) |
+| PROD1     | 1              | Sun Jan 14 2024 16:00:00 GMT-0800 (Pacific Standard Time) |
+| PROD1     | 1              | Wed Jan 24 2024 16:00:00 GMT-0800 (Pacific Standard Time) |
+| PROD1     | 2              | Thu Jan 04 2024 16:00:00 GMT-0800 (Pacific Standard Time) |
+| PROD1     | 2              | Thu Jan 11 2024 16:00:00 GMT-0800 (Pacific Standard Time) |
+| PROD1     | 2              | Fri Jan 19 2024 16:00:00 GMT-0800 (Pacific Standard Time) |
+| PROD2     | 1              | Mon Jan 01 2024 16:00:00 GMT-0800 (Pacific Standard Time) |
+| PROD2     | 1              | Wed Jan 10 2024 16:00:00 GMT-0800 (Pacific Standard Time) |
++-----------+----------------+-----------------------------------------------------------+`
   }
 ];
 
