@@ -13,6 +13,7 @@ import {
   ResizableHandle,
 } from "@/components/ui/resizable"
 import { questions } from "@/lib/sql-data"
+import { useMediaQuery } from "@/components/hooks/use-media-query"
 
 const ONBOARDED_KEY = "sql-navigator-onboarded"
 type FlowStep = "welcome" | "theme" | "app"
@@ -22,6 +23,13 @@ export default function SQLNavigatorPage() {
   const [selectedCategory, setSelectedCategory] = useState("All Patterns")
   const [selectedDifficulty, setSelectedDifficulty] = useState("All")
   const [currentIndex, setCurrentIndex] = useState(0)
+
+  const isDesktop = useMediaQuery("(min-width: 768px)")
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Timer State
   const [timerElapsed, setTimerElapsed] = useState(0)
@@ -159,7 +167,7 @@ export default function SQLNavigatorPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col sql-app" data-step="app">
+    <div className={`flex flex-col sql-app ${mounted && isDesktop ? "h-screen overflow-hidden" : "min-h-screen"}`} data-step="app">
       <AnimatedBackground />
 
       {/* Header - z-10 so Pattern dropdown appears above main content */}
@@ -176,13 +184,46 @@ export default function SQLNavigatorPage() {
 
       {/* Main Content */}
       <div className="flex-1 p-2 min-h-0">
-        <ResizablePanelGroup
-          direction="horizontal"
-          className="h-full rounded-lg"
-        >
-          {/* Left Panel - Mission Briefing */}
-          <ResizablePanel defaultSize={45} minSize={30}>
-            <div className="h-full glass-panel overflow-hidden">
+        {!mounted ? null : isDesktop ? (
+          <ResizablePanelGroup
+            direction="horizontal"
+            className="h-full rounded-lg"
+          >
+            {/* Left Panel - Mission Briefing */}
+            <ResizablePanel defaultSize={45} minSize={30}>
+              <div className="h-full glass-panel overflow-hidden">
+                <LeftPanel
+                  question={currentQuestion}
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                  hasPrevious={currentIndex > 0}
+                  hasNext={currentIndex < filteredQuestions.length - 1}
+                  currentIndex={currentIndex}
+                  totalQuestions={filteredQuestions.length}
+                />
+              </div>
+            </ResizablePanel>
+
+            {/* Resize Handle */}
+            <ResizableHandle className="mx-1 w-[3px] rounded-full bg-border/50 hover:bg-cyan/30 transition-colors data-[resize-handle-state=drag]:bg-cyan/50" />
+
+            {/* Right Panel - The Engine */}
+            <ResizablePanel defaultSize={55} minSize={30}>
+              <div className="h-full glass-panel overflow-hidden">
+                <RightPanel
+                  starterCode={currentQuestion.starterCode}
+                  questionId={currentQuestion.id}
+                  timerRunning={timerRunning}
+                  onTimerStart={handleTimerStart}
+                  onTimerPause={handleTimerPause}
+                  onTimerReset={handleTimerReset}
+                />
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <div className="glass-panel overflow-hidden">
               <LeftPanel
                 question={currentQuestion}
                 onPrevious={handlePrevious}
@@ -193,14 +234,7 @@ export default function SQLNavigatorPage() {
                 totalQuestions={filteredQuestions.length}
               />
             </div>
-          </ResizablePanel>
-
-          {/* Resize Handle */}
-          <ResizableHandle className="mx-1 w-[3px] rounded-full bg-border/50 hover:bg-cyan/30 transition-colors data-[resize-handle-state=drag]:bg-cyan/50" />
-
-          {/* Right Panel - The Engine */}
-          <ResizablePanel defaultSize={55} minSize={30}>
-            <div className="h-full glass-panel overflow-hidden">
+            <div className="glass-panel overflow-hidden min-h-[500px]">
               <RightPanel
                 starterCode={currentQuestion.starterCode}
                 questionId={currentQuestion.id}
@@ -210,8 +244,8 @@ export default function SQLNavigatorPage() {
                 onTimerReset={handleTimerReset}
               />
             </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
+          </div>
+        )}
       </div>
     </div>
   )
