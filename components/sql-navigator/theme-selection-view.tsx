@@ -34,8 +34,8 @@ export function ThemeSelectionView({
   const { theme, setTheme } = useTheme()
 
   return (
-    <div className="fixed inset-0 flex flex-col z-20 animate-in fade-in-0 slide-in-from-right-4 duration-500">
-      <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+    <div className="fixed inset-0 z-20 animate-in fade-in-0 slide-in-from-right-4 duration-500 overflow-y-auto">
+      <div className="min-h-full flex flex-col items-center justify-center p-4 py-8 sm:py-12">
         <div className="flex items-center gap-2 mb-2">
           <Sparkles className="h-5 w-5 text-theme" />
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-center">
