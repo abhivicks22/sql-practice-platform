@@ -43,7 +43,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} ${sourceSans.variable} ${orbitron.variable}`} data-theme="neon-pulse">
-      <body className="font-sans antialiased overflow-hidden">
+      <body className="font-sans antialiased">
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
