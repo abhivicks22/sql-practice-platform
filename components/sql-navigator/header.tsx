@@ -100,8 +100,8 @@ export function Header({
                 <span className="hidden sm:inline">Start over</span>
               </button>
             )}
-            {/* Digital Timer Display */}
-            <div className="font-digital text-2xl text-[hsl(var(--cyan-glow))] drop-shadow-[0_0_8px_hsl(var(--cyan)_/_0.5)] tabular-nums leading-none tracking-widest">
+            {/* Digital Timer Display - Hidden on Mobile */}
+            <div className="hidden md:block font-digital text-2xl text-[hsl(var(--cyan-glow))] drop-shadow-[0_0_8px_hsl(var(--cyan)_/_0.5)] tabular-nums leading-none tracking-widest">
               {mins}:{secs}
             </div>
           </div>
