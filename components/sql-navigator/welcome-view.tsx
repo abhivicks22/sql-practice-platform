@@ -43,5 +43,6 @@ export function WelcomeView({ onGetStarted }: { onGetStarted: () => void }) {
           </button>
         </div>
       </div>
-      )
+    </div>
+  )
 }
