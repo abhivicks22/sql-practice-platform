@@ -12,6 +12,8 @@ interface HeaderProps {
   onDifficultyChange: (difficulty: string) => void
   /** When set, shows a "Start over" button that returns to the welcome flow */
   onStartOver?: () => void
+  /** Current timer value in seconds */
+  timerElapsed?: number
 }
 
 const difficultyColors: Record<string, { active: string; inactive: string }> = {
@@ -43,6 +45,7 @@ export function Header({
   selectedDifficulty,
   onDifficultyChange,
   onStartOver,
+  timerElapsed = 0,
 }: HeaderProps) {
   const { theme, setTheme } = useTheme()
   const [patternOpen, setPatternOpen] = useState(false)
@@ -63,6 +66,10 @@ export function Header({
     return () => document.removeEventListener("click", handleClickOutside)
   }, [])
 
+  // Format timer: MM:SS
+  const mins = Math.floor(timerElapsed / 60).toString().padStart(2, "0")
+  const secs = (timerElapsed % 60).toString().padStart(2, "0")
+
   return (
     <header className="glass-panel-strong px-6 py-3 flex flex-col gap-3 relative">
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--primary)_/_0.2)] to-transparent" aria-hidden />
@@ -80,49 +87,55 @@ export function Header({
             v2.0
           </span>
         </div>
-        <nav className="flex items-center gap-2">
-          {onStartOver && (
+        <nav className="flex items-start gap-4">
+          <div className="flex flex-col items-end gap-1">
+            {onStartOver && (
+              <button
+                type="button"
+                onClick={onStartOver}
+                className="btn-space flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all mb-1"
+                title="Start over (back to welcome)"
+              >
+                <Home className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Start over</span>
+              </button>
+            )}
+            {/* Digital Timer Display */}
+            <div className="font-digital text-2xl text-[hsl(var(--cyan-glow))] drop-shadow-[0_0_8px_hsl(var(--cyan)_/_0.5)] tabular-nums leading-none tracking-widest">
+              {mins}:{secs}
+            </div>
+          </div>
+
+          <div className="relative" ref={themeRef} aria-label="Theme">
             <button
               type="button"
-              onClick={onStartOver}
-              className="btn-space flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all"
-              title="Start over (back to welcome)"
+              onClick={() => setThemeOpen((o) => !o)}
+              className="btn-space flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all self-start"
             >
-              <Home className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Start over</span>
+              <Palette className="h-3.5 w-3.5 text-theme" />
+              Theme
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${themeOpen ? "rotate-180" : ""}`} />
             </button>
-          )}
-          <div className="relative" ref={themeRef} aria-label="Theme">
-          <button
-            type="button"
-            onClick={() => setThemeOpen((o) => !o)}
-            className="btn-space flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all"
-          >
-            <Palette className="h-3.5 w-3.5 text-theme" />
-            Theme
-            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${themeOpen ? "rotate-180" : ""}`} />
-          </button>
-          {themeOpen && (
-            <div className="absolute right-0 top-full mt-1 py-1 min-w-[160px] rounded-md border border-border/50 bg-card shadow-xl z-[9999]">
-              {THEMES.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => {
-                    setTheme(t.id)
-                    setThemeOpen(false)
-                  }}
-                  className={`block w-full text-left px-3 py-2 text-xs font-medium transition-colors ${
-                    theme === t.id
+            {themeOpen && (
+              <div className="absolute right-0 top-full mt-1 py-1 min-w-[160px] rounded-md border border-border/50 bg-card shadow-xl z-[9999]">
+                {THEMES.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => {
+                      setTheme(t.id)
+                      setThemeOpen(false)
+                    }}
+                    className={`block w-full text-left px-3 py-2 text-xs font-medium transition-colors ${theme === t.id
                       ? "bg-theme-subtle text-theme"
                       : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          )}
+                      }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </nav>
       </div>
@@ -149,11 +162,10 @@ export function Header({
                     onCategoryChange(cat)
                     setPatternOpen(false)
                   }}
-                  className={`block w-full text-left px-3 py-2 text-xs font-medium transition-colors ${
-                    selectedCategory === cat
-                      ? "bg-theme-subtle text-theme"
-                      : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
-                  }`}
+                  className={`block w-full text-left px-3 py-2 text-xs font-medium transition-colors ${selectedCategory === cat
+                    ? "bg-theme-subtle text-theme"
+                    : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                    }`}
                 >
                   {cat}
                 </button>
@@ -167,9 +179,8 @@ export function Header({
           <button
             type="button"
             onClick={() => setDiffOpen((o) => !o)}
-            className={`btn-space flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all rounded-md ${
-              difficultyColors[selectedDifficulty]?.active ?? "bg-theme-subtle text-theme border-theme"
-            }`}
+            className={`btn-space flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all rounded-md ${difficultyColors[selectedDifficulty]?.active ?? "bg-theme-subtle text-theme border-theme"
+              }`}
           >
             {selectedDifficulty}
             <ChevronDown className={`h-3.5 w-3.5 transition-transform ${diffOpen ? "rotate-180" : ""}`} />
@@ -184,11 +195,10 @@ export function Header({
                     onDifficultyChange(diff)
                     setDiffOpen(false)
                   }}
-                  className={`block w-full text-left px-3 py-2 text-xs font-medium transition-colors ${
-                    selectedDifficulty === diff
-                      ? difficultyColors[diff]?.active ?? "bg-theme-subtle text-theme"
-                      : difficultyColors[diff]?.inactive ?? "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
-                  }`}
+                  className={`block w-full text-left px-3 py-2 text-xs font-medium transition-colors ${selectedDifficulty === diff
+                    ? difficultyColors[diff]?.active ?? "bg-theme-subtle text-theme"
+                    : difficultyColors[diff]?.inactive ?? "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                    }`}
                 >
                   {diff}
                 </button>

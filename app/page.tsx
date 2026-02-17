@@ -23,6 +23,32 @@ export default function SQLNavigatorPage() {
   const [selectedDifficulty, setSelectedDifficulty] = useState("All")
   const [currentIndex, setCurrentIndex] = useState(0)
 
+  // Timer State
+  const [timerElapsed, setTimerElapsed] = useState(0)
+  const [timerRunning, setTimerRunning] = useState(false)
+
+  // Timer Logic
+  useEffect(() => {
+    let interval: NodeJS.Timeout
+    if (timerRunning) {
+      interval = setInterval(() => setTimerElapsed((s) => s + 1), 1000)
+    }
+    return () => clearInterval(interval)
+  }, [timerRunning])
+
+  // Reset timer when question changes
+  useEffect(() => {
+    setTimerElapsed(0)
+    setTimerRunning(false)
+  }, [currentIndex, selectedCategory, selectedDifficulty])
+
+  const handleTimerStart = () => setTimerRunning(true)
+  const handleTimerPause = () => setTimerRunning(false)
+  const handleTimerReset = () => {
+    setTimerRunning(false)
+    setTimerElapsed(0)
+  }
+
   useEffect(() => {
     try {
       if (typeof window === "undefined") return
@@ -115,6 +141,7 @@ export default function SQLNavigatorPage() {
             selectedDifficulty={selectedDifficulty}
             onDifficultyChange={handleDifficultyChange}
             onStartOver={handleStartOver}
+            timerElapsed={timerElapsed}
           />
         </div>
         <div className="flex-1 flex items-center justify-center">
@@ -143,6 +170,7 @@ export default function SQLNavigatorPage() {
           selectedDifficulty={selectedDifficulty}
           onDifficultyChange={handleDifficultyChange}
           onStartOver={handleStartOver}
+          timerElapsed={timerElapsed}
         />
       </div>
 
@@ -173,7 +201,14 @@ export default function SQLNavigatorPage() {
           {/* Right Panel - The Engine */}
           <ResizablePanel defaultSize={55} minSize={30}>
             <div className="h-full glass-panel overflow-hidden">
-              <RightPanel starterCode={currentQuestion.starterCode} questionId={currentQuestion.id} />
+              <RightPanel
+                starterCode={currentQuestion.starterCode}
+                questionId={currentQuestion.id}
+                timerRunning={timerRunning}
+                onTimerStart={handleTimerStart}
+                onTimerPause={handleTimerPause}
+                onTimerReset={handleTimerReset}
+              />
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>

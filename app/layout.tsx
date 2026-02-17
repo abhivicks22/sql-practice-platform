@@ -1,6 +1,6 @@
 import React from "react"
 import type { Metadata, Viewport } from 'next'
-import { Inter, JetBrains_Mono, Source_Sans_3 } from 'next/font/google'
+import { Inter, JetBrains_Mono, Source_Sans_3, Orbitron } from 'next/font/google'
 
 import './globals.css'
 import { ThemeProvider } from "@/contexts/theme-context"
@@ -21,6 +21,12 @@ const sourceSans = Source_Sans_3({
   display: 'swap',
 })
 
+const orbitron = Orbitron({
+  subsets: ['latin'],
+  variable: '--font-orbitron',
+  display: 'swap',
+})
+
 export const metadata: Metadata = {
   title: 'SQL Navigator - Practice SQL Mastery',
   description: 'A futuristic SQL practice platform to master database queries',
@@ -36,7 +42,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} ${sourceSans.variable}`} data-theme="neon-pulse">
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} ${sourceSans.variable} ${orbitron.variable}`} data-theme="neon-pulse">
       <body className="font-sans antialiased overflow-hidden">
         <ThemeProvider>{children}</ThemeProvider>
       </body>

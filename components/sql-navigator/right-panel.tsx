@@ -29,9 +29,20 @@ import { SqlEditor } from "./sql-editor"
 interface RightPanelProps {
   starterCode: string
   questionId: number
+  timerRunning?: boolean
+  onTimerStart?: () => void
+  onTimerPause?: () => void
+  onTimerReset?: () => void
 }
 
-export function RightPanel({ starterCode, questionId }: RightPanelProps) {
+export function RightPanel({
+  starterCode,
+  questionId,
+  timerRunning = false,
+  onTimerStart,
+  onTimerPause,
+  onTimerReset,
+}: RightPanelProps) {
   const [code, setCode] = useState(starterCode)
   const [output, setOutput] = useState<string[]>([
     "-- SQL Navigator Console v2.0",
@@ -40,30 +51,6 @@ export function RightPanel({ starterCode, questionId }: RightPanelProps) {
   const [isRunning, setIsRunning] = useState(false)
   const [isEvaluating, setIsEvaluating] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [timerElapsed, setTimerElapsed] = useState(0)
-  const [timerRunning, setTimerRunning] = useState(false)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  useEffect(() => {
-    if (!timerRunning) return
-    timerRef.current = setInterval(() => {
-      setTimerElapsed((s) => s + 1)
-    }, 1000)
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
-      timerRef.current = null
-    }
-  }, [timerRunning])
-
-  const timerStart = () => setTimerRunning(true)
-  const timerPause = () => setTimerRunning(false)
-  const timerReset = () => {
-    setTimerRunning(false)
-    setTimerElapsed(0)
-  }
-  const timerDisplay = `${Math.floor(timerElapsed / 60)
-    .toString()
-    .padStart(2, "0")}:${(timerElapsed % 60).toString().padStart(2, "0")}`
 
   const [questionData, setQuestionData] = useState<{
     sampleData: string
@@ -120,6 +107,7 @@ export function RightPanel({ starterCode, questionId }: RightPanelProps) {
       return
     }
     setIsRunning(true)
+    onTimerStart?.() // Auto-start timer on run
     appendOutput([`> Executing query...`])
     try {
       await resetDatabase()
@@ -202,14 +190,10 @@ export function RightPanel({ starterCode, questionId }: RightPanelProps) {
                 <span className="text-xs font-mono text-muted-foreground ml-2">query.sql</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-xs font-mono text-red-500 flex items-center gap-1.5 tabular-nums" title="Timer">
-                  <TimerIcon className="h-3.5 w-3.5" />
-                  {timerDisplay}
-                </span>
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
-                    onClick={timerRunning ? timerPause : timerStart}
+                    onClick={timerRunning ? onTimerPause : onTimerStart}
                     className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
                     title={timerRunning ? "Pause" : "Start"}
                   >
@@ -217,7 +201,7 @@ export function RightPanel({ starterCode, questionId }: RightPanelProps) {
                   </button>
                   <button
                     type="button"
-                    onClick={timerReset}
+                    onClick={onTimerReset}
                     className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
                     title="Reset timer"
                   >
@@ -270,9 +254,9 @@ export function RightPanel({ starterCode, questionId }: RightPanelProps) {
                 <div
                   key={i}
                   className={`whitespace-pre ${line.startsWith(">") ? "text-cyan"
-                      : line.includes("✓") || line.includes("row(s)") ? "text-theme"
-                        : line.includes("✗") || line.includes("Error") ? "text-red-400"
-                          : "text-muted-foreground"
+                    : line.includes("✓") || line.includes("row(s)") ? "text-theme"
+                      : line.includes("✗") || line.includes("Error") ? "text-red-400"
+                        : "text-muted-foreground"
                     }`}
                 >
                   {line || "\u00A0"}
