@@ -93,7 +93,7 @@ export function SqlEditor({
       <div className="relative flex-1 min-w-0">
         <pre
           ref={preRef}
-          className="absolute inset-0 overflow-hidden p-4 text-[13px] font-mono leading-5 text-transparent pointer-events-none"
+          className="absolute inset-0 overflow-hidden p-4 text-base md:text-[13px] font-mono leading-relaxed md:leading-5 text-transparent pointer-events-none"
           aria-hidden
         >
           {showPlaceholder ? (
@@ -129,7 +129,7 @@ export function SqlEditor({
           onChange={(e) => onChange(e.target.value)}
           spellCheck={false}
           placeholder={placeholder}
-          className="absolute inset-0 w-full h-full resize-none bg-transparent p-4 text-[13px] font-mono leading-5 caret-cyan placeholder:text-muted-foreground/30 focus:outline-none overflow-auto custom-scrollbar"
+          className="absolute inset-0 w-full h-full resize-none bg-transparent p-4 text-base md:text-[13px] font-mono leading-relaxed md:leading-5 caret-cyan placeholder:text-muted-foreground/30 focus:outline-none overflow-auto custom-scrollbar z-10"
           style={{ color: "transparent", caretColor: "hsl(var(--cyan))" }}
         />
       </div>
