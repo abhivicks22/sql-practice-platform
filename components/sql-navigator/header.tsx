@@ -141,7 +141,7 @@ export function Header({
       </div>
 
       {/* Bottom row: Pattern drill-down + Difficulty tabs */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-start gap-4">
         {/* Pattern: one tab with dropdown (options from categories in sql-data) */}
         <nav className="relative" ref={patternRef} aria-label="SQL Pattern">
           <button
@@ -149,7 +149,7 @@ export function Header({
             onClick={() => setPatternOpen((o) => !o)}
             className="btn-space flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all rounded-md bg-theme-subtle text-theme border-theme"
           >
-            {selectedCategory}
+            {selectedCategory === "All Patterns" ? "Pattern" : selectedCategory}
             <ChevronDown className={`h-3.5 w-3.5 transition-transform ${patternOpen ? "rotate-180" : ""}`} />
           </button>
           {patternOpen && (
@@ -182,7 +182,7 @@ export function Header({
             className={`btn-space flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all rounded-md ${difficultyColors[selectedDifficulty]?.active ?? "bg-theme-subtle text-theme border-theme"
               }`}
           >
-            {selectedDifficulty}
+            {selectedDifficulty === "All" ? "Difficulty" : selectedDifficulty}
             <ChevronDown className={`h-3.5 w-3.5 transition-transform ${diffOpen ? "rotate-180" : ""}`} />
           </button>
           {diffOpen && (
