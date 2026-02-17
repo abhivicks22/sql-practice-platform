@@ -3,10 +3,12 @@
 import { useState, useMemo, useEffect } from "react"
 import { Header } from "@/components/sql-navigator/header"
 import { LeftPanel } from "@/components/sql-navigator/left-panel"
-import { RightPanel } from "@/components/sql-navigator/right-panel"
+import { RightPanel, RightPanelHandle } from "@/components/sql-navigator/right-panel"
 import { WelcomeView } from "@/components/sql-navigator/welcome-view"
 import { ThemeSelectionView } from "@/components/sql-navigator/theme-selection-view"
 import { AnimatedBackground } from "@/components/sql-navigator/animated-background"
+import { MobileActionBar } from "@/components/sql-navigator/mobile-action-bar"
+import { useRef } from "react"
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -34,6 +36,11 @@ export default function SQLNavigatorPage() {
   // Timer State
   const [timerElapsed, setTimerElapsed] = useState(0)
   const [timerRunning, setTimerRunning] = useState(false)
+
+  // Execution State (Lifted for Mobile Action Bar)
+  const [isRunning, setIsRunning] = useState(false)
+  const [isEvaluating, setIsEvaluating] = useState(false)
+  const rightPanelRef = useRef<RightPanelHandle>(null)
 
   // Timer Logic
   useEffect(() => {
@@ -211,6 +218,7 @@ export default function SQLNavigatorPage() {
             <ResizablePanel defaultSize={55} minSize={30}>
               <div className="h-full glass-panel overflow-hidden">
                 <RightPanel
+                  ref={rightPanelRef}
                   starterCode={currentQuestion.starterCode}
                   questionId={currentQuestion.id}
                   timerRunning={timerRunning}
@@ -218,6 +226,8 @@ export default function SQLNavigatorPage() {
                   onTimerStart={handleTimerStart}
                   onTimerPause={handleTimerPause}
                   onTimerReset={handleTimerReset}
+                  onRunningChange={setIsRunning}
+                  onEvaluatingChange={setIsEvaluating}
                 />
               </div>
             </ResizablePanel>
@@ -235,19 +245,37 @@ export default function SQLNavigatorPage() {
                 totalQuestions={filteredQuestions.length}
               />
             </div>
-            <div className="glass-panel overflow-hidden min-h-[500px]">
+            <div className="glass-panel overflow-hidden h-[600px] flex flex-col">
               <RightPanel
+                ref={rightPanelRef}
                 starterCode={currentQuestion.starterCode}
                 questionId={currentQuestion.id}
                 timerRunning={timerRunning}
                 onTimerStart={handleTimerStart}
                 onTimerPause={handleTimerPause}
                 onTimerReset={handleTimerReset}
+                onRunningChange={setIsRunning}
+                onEvaluatingChange={setIsEvaluating}
               />
             </div>
           </div>
         )}
       </div>
+
+      {/* Mobile Action Bar - Fixed to Viewport (Outside Glass Panels) */}
+      {!isDesktop && mounted && (
+        <MobileActionBar
+          onRun={() => rightPanelRef.current?.handleRun()}
+          onEvaluate={() => rightPanelRef.current?.handleEvaluate()}
+          isRunning={isRunning}
+          isEvaluating={isEvaluating}
+          timerRunning={timerRunning}
+          timerElapsed={timerElapsed}
+          onTimerStart={handleTimerStart}
+          onTimerPause={handleTimerPause}
+          onTimerReset={handleTimerReset}
+        />
+      )}
     </div>
   )
 }

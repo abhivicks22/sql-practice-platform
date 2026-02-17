@@ -26,7 +26,12 @@ import {
 } from "@/lib/sql-engine"
 import { SqlEditor } from "./sql-editor"
 import { useMediaQuery } from "@/components/hooks/use-media-query"
-import { MobileActionBar } from "./mobile-action-bar"
+import { forwardRef, useImperativeHandle } from "react"
+
+export interface RightPanelHandle {
+  handleRun: () => void
+  handleEvaluate: () => void
+}
 
 interface RightPanelProps {
   starterCode: string
@@ -36,9 +41,11 @@ interface RightPanelProps {
   onTimerStart?: () => void
   onTimerPause?: () => void
   onTimerReset?: () => void
+  onRunningChange?: (isRunning: boolean) => void
+  onEvaluatingChange?: (isEvaluating: boolean) => void
 }
 
-export function RightPanel({
+export const RightPanel = forwardRef<RightPanelHandle, RightPanelProps>(({
   starterCode,
   questionId,
   timerRunning = false,
@@ -46,7 +53,9 @@ export function RightPanel({
   onTimerStart,
   onTimerPause,
   onTimerReset,
-}: RightPanelProps) {
+  onRunningChange,
+  onEvaluatingChange,
+}, ref) => {
   const isMobile = useMediaQuery("(max-width: 768px)")
   const [code, setCode] = useState(starterCode)
   const [output, setOutput] = useState<string[]>([
@@ -112,6 +121,7 @@ export function RightPanel({
       return
     }
     setIsRunning(true)
+    onRunningChange?.(true)
     onTimerStart?.() // Auto-start timer on run
 
     // Auto-scroll to console on mobile
@@ -146,8 +156,9 @@ export function RightPanel({
       appendOutput([`  Error: ${e instanceof Error ? e.message : "Run failed"}`])
     } finally {
       setIsRunning(false)
+      onRunningChange?.(false)
     }
-  }, [questionData, code, appendOutput])
+  }, [questionData, code, appendOutput, onTimerStart, onRunningChange])
 
   const handleEvaluate = useCallback(async () => {
     if (!questionData) {
@@ -157,6 +168,7 @@ export function RightPanel({
     const firstStmt = code.split(';').map((s) => s.trim()).filter((s) => s.length > 0 && !/^\s*(--|$)/.test(s))[0]
     const queryToEval = firstStmt ? firstStmt + ';' : code
     setIsEvaluating(true)
+    onEvaluatingChange?.(true)
     appendOutput([`> Evaluating against solution...`])
     try {
       await resetDatabase()
@@ -174,8 +186,14 @@ export function RightPanel({
       appendOutput([`  Error: ${e instanceof Error ? e.message : "Evaluation failed"}`])
     } finally {
       setIsEvaluating(false)
+      onEvaluatingChange?.(false)
     }
-  }, [questionData, code, appendOutput])
+  }, [questionData, code, appendOutput, onEvaluatingChange])
+
+  useImperativeHandle(ref, () => ({
+    handleRun,
+    handleEvaluate
+  }))
 
   const handleCopy = () => {
     navigator.clipboard.writeText(code)
@@ -280,17 +298,7 @@ export function RightPanel({
         </ResizablePanel>
       </ResizablePanelGroup>
 
-      <MobileActionBar
-        onRun={handleRun}
-        onEvaluate={handleEvaluate}
-        isRunning={isRunning}
-        isEvaluating={isEvaluating}
-        timerRunning={timerRunning}
-        timerElapsed={timerElapsed}
-        onTimerStart={onTimerStart}
-        onTimerPause={onTimerPause}
-        onTimerReset={onTimerReset}
-      />
     </div>
   )
-}
+})
+RightPanel.displayName = "RightPanel"
