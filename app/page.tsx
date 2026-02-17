@@ -214,6 +214,7 @@ export default function SQLNavigatorPage() {
                   starterCode={currentQuestion.starterCode}
                   questionId={currentQuestion.id}
                   timerRunning={timerRunning}
+                  timerElapsed={timerElapsed}
                   onTimerStart={handleTimerStart}
                   onTimerPause={handleTimerPause}
                   onTimerReset={handleTimerReset}

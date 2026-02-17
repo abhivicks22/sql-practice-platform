@@ -25,11 +25,14 @@ import {
   formatResultsAsTable,
 } from "@/lib/sql-engine"
 import { SqlEditor } from "./sql-editor"
+import { useMediaQuery } from "@/components/hooks/use-media-query"
+import { MobileActionBar } from "./mobile-action-bar"
 
 interface RightPanelProps {
   starterCode: string
   questionId: number
   timerRunning?: boolean
+  timerElapsed?: number
   onTimerStart?: () => void
   onTimerPause?: () => void
   onTimerReset?: () => void
@@ -39,10 +42,12 @@ export function RightPanel({
   starterCode,
   questionId,
   timerRunning = false,
+  timerElapsed = 0,
   onTimerStart,
   onTimerPause,
   onTimerReset,
 }: RightPanelProps) {
+  const isMobile = useMediaQuery("(max-width: 768px)")
   const [code, setCode] = useState(starterCode)
   const [output, setOutput] = useState<string[]>([
     "-- SQL Navigator Console v2.0",
@@ -108,6 +113,14 @@ export function RightPanel({
     }
     setIsRunning(true)
     onTimerStart?.() // Auto-start timer on run
+
+    // Auto-scroll to console on mobile
+    if (window.innerWidth < 768) {
+      setTimeout(() => {
+        consoleRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+      }, 100)
+    }
+
     appendOutput([`> Executing query...`])
     try {
       await resetDatabase()
@@ -219,7 +232,7 @@ export function RightPanel({
             <div className="flex-1 min-h-0">
               <SqlEditor value={code} onChange={setCode} placeholder="Write your SQL query here..." />
             </div>
-            <div className="flex items-center gap-3 px-4 py-3 border-t border-border/50 shrink-0">
+            <div className="hidden md:flex items-center gap-3 px-4 py-3 border-t border-border/50 shrink-0">
               <button
                 onClick={handleRun}
                 disabled={isRunning || isEvaluating}
@@ -266,6 +279,18 @@ export function RightPanel({
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
+
+      <MobileActionBar
+        onRun={handleRun}
+        onEvaluate={handleEvaluate}
+        isRunning={isRunning}
+        isEvaluating={isEvaluating}
+        timerRunning={timerRunning}
+        timerElapsed={timerElapsed}
+        onTimerStart={onTimerStart}
+        onTimerPause={onTimerPause}
+        onTimerReset={onTimerReset}
+      />
     </div>
   )
 }
