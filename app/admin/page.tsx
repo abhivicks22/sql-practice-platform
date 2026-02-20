@@ -2,6 +2,8 @@ import prisma from '@/lib/db/prisma'
 import Link from 'next/link'
 import { Plus, Database, Pencil, Trash2 } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminDashboard() {
   let questions: any[] = []
   let dbError = false

@@ -8,7 +8,8 @@ async function loginUser(formData: FormData) {
     const password = formData.get('password')
 
     if (password === secret) {
-        cookies().set('admin_token', 'authenticated', {
+        const cookieStore = await cookies()
+        cookieStore.set('admin_token', 'authenticated', {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             maxAge: 60 * 60 * 24 // 1 day
