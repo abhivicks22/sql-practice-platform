@@ -1,21 +1,21 @@
 import { PrismaClient } from '@prisma/client'
-import { questions } from '../lib/sql-data'
+import { sqlQuestionsData } from '../lib/sql-data.old.ts'
 
 const prisma = new PrismaClient()
 
 async function main() {
     console.log('Seeding database from imported lib/sql-data.ts...')
 
-    if (!questions || questions.length === 0) {
+    if (!sqlQuestionsData || sqlQuestionsData.length === 0) {
         throw new Error('No questions found to migrate.')
     }
 
-    console.log(`Found ${questions.length} questions to migrate.`)
+    console.log(`Found ${sqlQuestionsData.length} questions to migrate.`)
 
     // Clear existing to avoid duplicates during testing
     await prisma.question.deleteMany()
 
-    for (const q of questions) {
+    for (const q of sqlQuestionsData) {
         const createdQuestion = await prisma.question.create({
             data: {
                 title: q.title,
@@ -56,20 +56,17 @@ async function main() {
             }
         }
 
-        // Insert solutions if they exist on the Question type
-        if (q.solutions && q.solutions.length > 0) {
-            for (const sol of q.solutions) {
-                await prisma.solution.create({
-                    data: {
-                        title: sol.title,
-                        description: sol.description,
-                        code: sol.code,
-                        questionId: createdQuestion.id
-                    }
-                })
-            }
+        // Create a Solution record from the systemSolution for the UI to display in the Solutions tab
+        if (q.systemSolution) {
+            await prisma.solution.create({
+                data: {
+                    title: "System Solution",
+                    description: "Reference solution to the problem.",
+                    code: q.systemSolution,
+                    questionId: createdQuestion.id
+                }
+            })
         }
-
         process.stdout.write('.')
     }
 

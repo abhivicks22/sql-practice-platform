@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Database, ChevronDown, Palette, Home } from "lucide-react"
+import { Database, ChevronDown, Palette, Home, Shield } from "lucide-react"
 import { categories, difficulties } from "@/lib/sql-data"
 import { useTheme, THEMES } from "@/contexts/theme-context"
 
@@ -100,6 +100,14 @@ export function Header({
                 <span className="hidden sm:inline">Start over</span>
               </button>
             )}
+            <a
+              href="/admin"
+              className="btn-space flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all mb-1 text-muted-foreground hover:text-foreground"
+              title="Admin Dashboard"
+            >
+              <Shield className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Admin</span>
+            </a>
             {/* Digital Timer Display - Hidden on Mobile */}
             <div className="hidden md:block font-digital text-2xl text-[hsl(var(--cyan-glow))] drop-shadow-[0_0_8px_hsl(var(--cyan)_/_0.5)] tabular-nums leading-none tracking-widest">
               {mins}:{secs}
