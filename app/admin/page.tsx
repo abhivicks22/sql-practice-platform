@@ -3,15 +3,23 @@ import Link from 'next/link'
 import { Plus, Database, Pencil, Trash2 } from 'lucide-react'
 
 export default async function AdminDashboard() {
-  const questions = await prisma.question.findMany({
-    orderBy: { id: 'asc' },
-    select: {
-      id: true,
-      title: true,
-      difficulty: true,
-      category: true,
-    }
-  })
+  let questions: any[] = []
+  let dbError = false
+
+  try {
+    questions = await prisma.question.findMany({
+      orderBy: { id: 'asc' },
+      select: {
+        id: true,
+        title: true,
+        difficulty: true,
+        category: true,
+      }
+    })
+  } catch (error) {
+    console.error("Failed to fetch questions in admin dashboard:", error)
+    dbError = true
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -31,6 +39,16 @@ export default async function AdminDashboard() {
           </Link>
         </div>
       </div>
+
+      {dbError && (
+        <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-lg flex items-center gap-3">
+          <Database className="w-5 h-5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold">Database Connection Error</p>
+            <p className="text-xs opacity-90">Could not connect to the database. Make sure your DATABASE_URL environment variable is set correctly in Vercel.</p>
+          </div>
+        </div>
+      )}
 
       <div className="glass-panel overflow-hidden">
         <div className="overflow-x-auto">
