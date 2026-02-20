@@ -1,6 +1,7 @@
 import prisma from '@/lib/db/prisma'
 import Link from 'next/link'
-import { Plus, Database, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Database, Pencil } from 'lucide-react'
+import { DeleteQuestionButton } from '@/components/admin/delete-question-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -89,12 +90,7 @@ export default async function AdminDashboard() {
                       >
                         <Pencil className="w-4 h-4" />
                       </Link>
-                      <button
-                        className="p-2 text-muted-foreground hover:text-red-400 hover:bg-red-400/10 rounded transition-colors"
-                        title="Delete Question (coming soon)"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <DeleteQuestionButton id={q.id} />
                     </div>
                   </td>
                 </tr>
