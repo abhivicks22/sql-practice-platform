@@ -1,0 +1,59 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Question {
+  id               Int      @id @default(autoincrement())
+  title            String
+  difficulty       String
+  category         String
+  points           Int
+  problem          String   @db.Text
+  sampleData       String   @db.Text
+  mySolution       String?  @db.Text
+  systemSolution   String   @db.Text
+  expectedOutput   String?  @db.Text
+  starterCode      String   @db.Text
+  businessImpact   String   @db.Text
+  optimizationTips String[]
+  edgeCases        String[]
+
+  schemaTables     SchemaTable[]
+  solutions        Solution[]
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model SchemaTable {
+  id         Int      @id @default(autoincrement())
+  name       String
+  
+  questionId Int
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  columns    Column[]
+}
+
+model Column {
+  id            Int         @id @default(autoincrement())
+  name          String
+  type          String
+  
+  schemaTableId Int
+  schemaTable   SchemaTable @relation(fields: [schemaTableId], references: [id], onDelete: Cascade)
+}
+
+model Solution {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?  @db.Text
+  code        String   @db.Text
+
+  questionId  Int
+  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}

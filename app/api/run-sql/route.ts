@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getQuestionById } from "@/lib/sql-data"
+import prisma from "@/lib/db/prisma"
 import {
   resetDatabase,
   setupQuestionData,
@@ -19,13 +19,17 @@ export async function POST(request: Request) {
       )
     }
 
-    const question = getQuestionById(questionId)
+    const question = await prisma.question.findUnique({
+      where: { id: questionId },
+      select: { sampleData: true }
+    })
+
     if (!question) {
       return NextResponse.json({ error: "Question not found" }, { status: 404 })
     }
 
     await resetDatabase()
-    const setup = await setupQuestionData(question.sampleData)
+    const setup = await setupQuestionData(question.sampleData || '')
     if (!setup.success) {
       return NextResponse.json(
         { success: false, error: setup.error, output: setup.error },
