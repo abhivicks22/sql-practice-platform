@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/db/prisma'
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const questionId = parseInt(params.id)
+        const resolvedParams = await params
+        const questionId = parseInt(resolvedParams.id)
         if (isNaN(questionId)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 })
 
         const body = await req.json()
@@ -73,9 +74,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const questionId = parseInt(params.id)
+        const resolvedParams = await params
+        const questionId = parseInt(resolvedParams.id)
         if (isNaN(questionId)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 })
 
         await prisma.question.delete({

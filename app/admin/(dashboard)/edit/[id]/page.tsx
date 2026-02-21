@@ -6,8 +6,13 @@ import type { Question } from '@/lib/sql-data'
 
 export const dynamic = 'force-dynamic'
 
-export default async function EditQuestionPage({ params }: { params: { id: string } }) {
-    const questionId = parseInt(params.id)
+type PageProps = {
+    params: Promise<{ id: string }>
+}
+
+export default async function EditQuestionPage({ params }: PageProps) {
+    const resolvedParams = await params
+    const questionId = parseInt(resolvedParams.id)
     if (isNaN(questionId)) return notFound()
 
     const data = await prisma.question.findUnique({
